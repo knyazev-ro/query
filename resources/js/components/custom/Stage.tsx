@@ -20,7 +20,7 @@ export default function Stage({ stage, isOver, idx }) {
             ref={setNodeRef}
             style={style}
             key={stage.id}
-            className={`min-h-[400px] w-96 flex-shrink-0 border-gray-200 p-4 text-stone-950`}
+            className={`min-h-[400px] max-w-120 flex-shrink-0 border-gray-200 p-4 text-stone-950`}
         >
             <StageHeader stage={stage} idx={idx}/>
             <div className="space-y-3">
@@ -29,7 +29,7 @@ export default function Stage({ stage, isOver, idx }) {
                 ))}
                 <button
                     onClick={() => handleCreateNewProject()}
-                    className="flex w-full cursor-pointer items-center justify-center border border-dashed py-9 text-gray-600 opacity-10 transition-all hover:opacity-100"
+                    className="flex w-full bg-[#acbfa4] cursor-pointer items-center justify-center border border-dashed py-9 text-gray-600 opacity-5 transition-all hover:opacity-30"
                 >
                     <PlusCircleIcon />
                 </button>
