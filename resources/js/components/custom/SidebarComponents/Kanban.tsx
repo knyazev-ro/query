@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { BoxIcon } from 'lucide-react';
+import { BoxIcon, DiscIcon } from 'lucide-react';
 
 export default function Kanban({collapsed, index}) {
     return (
@@ -10,7 +10,7 @@ export default function Kanban({collapsed, index}) {
                 collapsed ? 'justify-center' : ''
             }`}
         >
-            <BoxIcon className="h-5 w-5 text-[#fcfff3]" />
+            <DiscIcon className="h-5 w-5 text-[#fcfff3]" />
             {!collapsed && (
                 <span className="text-sm font-medium text-[#fcfff3]">
                     {"Канбан"}
