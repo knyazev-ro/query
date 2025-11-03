@@ -35,24 +35,26 @@ export default function User({ collapsed, index }) {
                     </span>
                 )}
             </MenuButton>
-            <MenuItems className={'bg-[#1e1d1d]'}>
+            <MenuItems className={'bg-[#1e1d1d] flex flex-col justify-center items-center'}>
                 {items.map((e, idx) => (
                     <MenuItem
                         key={idx}
                         as={'div'}
                         onClick={() => {
-                            if(e.method === 'POST') {
-                                router.post(e.href)
+                            if (e.method === 'POST') {
+                                router.post(e.href);
                             } else {
-                                router.get(e.href)
+                                router.get(e.href);
                             }
                         }}
-                        className="block w-full px-6 text-sm font-semibold py-3 text-left hover:bg-[#ff1b1c] data-focus:bg-[#ff1b1c]"
+                        className={`flex ${ collapsed ? 'justify-center' : 'px-6'} w-full gap-3 py-3 text-left text-sm font-semibold hover:bg-[#ff1b1c] data-focus:bg-[#ff1b1c]`}
                     >
-                        <div className='flex gap-2 items-center'>
-                        {<e.icon className='w-4'/>}
-                        {e.name}
-                        </div>
+                        {<e.icon className="w-4" />}
+                        {!collapsed && (
+                            <div className="flex items-center gap-2">
+                                {e.name}
+                            </div>
+                        )}
                     </MenuItem>
                 ))}
             </MenuItems>

@@ -39,7 +39,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             {showErr && <Errors errors={localErrors} />}
             <div className="flex h-full w-screen overflow-hidden">
                 <Sidebar />
-                <div className="h-[calc(100vh-0rem)] w-full overflow-auto bg-[#262626] p-4">{children}</div>
+                <div className="h-[calc(100vh-0rem)] w-full overflow-auto bg-[#262626]">{children}</div>
             </div>
         </div>
     );

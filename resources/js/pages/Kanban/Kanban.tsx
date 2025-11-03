@@ -71,7 +71,7 @@ export default function Kanban({ stages: initialStages, pipelines }) {
 
     return (
         <Layout>
-            <div className="flex flex-col gap-2 px-4 py-2">
+            <div className="flex flex-col gap-2 py-2">
             <div className=''>
             <Pipelines pipelines={pipelines}/>
             </div>
@@ -80,12 +80,14 @@ export default function Kanban({ stages: initialStages, pipelines }) {
                     onDragEnd={handleDragEnd}
                     onDragOver={handleDragOver}
                 >
-                    <div className="flex h-full overflow-x-auto bg-[#262626]">
+                    <div className="flex h-full px-2 overflow-x-auto bg-[#262626]">
                         {stages?.map((stage, idx) => (
                             <Stage
                                 key={stage.id}
                                 stage={stage}
                                 isOver={stage.id === overId}
+                                idx={idx}
+                                key={idx}
                             />
                         ))}
                     </div>

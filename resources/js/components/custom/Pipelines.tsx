@@ -11,7 +11,7 @@ export default function Pipelines({ pipelines }) {
     }
 
     return (
-        <div className="flex flex-col gap-1">
+        <div className="px-2 flex flex-col gap-1">
             <div className="text-gray-300 text-md font-semibold px-4">
                 {"Потоки"}
             </div>
