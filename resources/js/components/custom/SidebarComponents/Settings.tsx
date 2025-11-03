@@ -1,5 +1,5 @@
-import { UserCircleIcon } from "@heroicons/react/16/solid";
 import { router } from "@inertiajs/react";
+import { CogIcon } from "lucide-react";
 
 export default function Settings({collapsed, index}) {
     return (
@@ -10,7 +10,7 @@ export default function Settings({collapsed, index}) {
                 collapsed ? 'justify-center' : ''
             }`}
         >
-            <UserCircleIcon className="h-5 w-5 text-[#fcfff3]" />
+            <CogIcon className="h-5 w-5 text-[#fcfff3]" />
             {!collapsed && (
                 <span className="text-sm font-medium text-[#fcfff3]">
                     {"Настройки"}
