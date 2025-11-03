@@ -27,6 +27,9 @@ export default function ProjectCard({ project }) {
         router.post(route('projects.delete', project.id));
     };
 
+    const level = 4;
+    const levels = [false, false, false, false, false].map((e, idx) => level >= (idx + 1) ? true : false)
+
     const images = [
         'https://t3.ftcdn.net/jpg/16/81/25/58/360_F_1681255802_3JLKAyEmo93FKXX3rEoIGJ4cHzQkRRFU.jpg',
         // 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-iI_Nshu2x5taM7zZchxjuRSdgMu5WDo_fg&s',
@@ -39,13 +42,18 @@ export default function ProjectCard({ project }) {
             style={style}
             {...listeners}
             {...attributes}
-            className={`group z-10 flex flex-col rounded-md border-1 border-blue-300 bg-[#fcfff3] p-1 text-stone-950 shadow-sm backdrop-blur-md ${isDragging ? 'opacity-0' : 'opacity-100'}`}
+            className={`group z-10 flex flex-col rounded-md border-1 border-blue-300 bg-[#fcfff3] p-1 text-stone-950 shadow-lg backdrop-blur-md ${isDragging ? 'opacity-0' : 'opacity-100'}`}
         >
             {/* img */}
-            <div className={`grid grid-cols-${images.length > 1 ? 2 : 1}`}>
+            <div
+                className={`grid gap-1 grid-cols-${images.length > 1 ? 2 : 1}`}
+            >
                 {images.map((e) => (
                     <div>
-                        <img className="rounded-sm object-cover" src={e} />
+                        <img
+                            className="h-full w-full rounded-sm object-cover"
+                            src={e}
+                        />
                     </div>
                 ))}
             </div>
@@ -67,8 +75,8 @@ export default function ProjectCard({ project }) {
                         </button>
                     </div>
                     <div className="flex items-center justify-between gap-1.5 px-1">
-                        {[1, 2, 3, 4, 5].map((e) => (
-                            <div className="h-2 w-2 rounded-full bg-[#ff1b1c]"></div>
+                        {levels.map((e) => (
+                            <div className={`h-2 w-2 rounded-full ${e ? 'bg-[#ff1b1c]' : 'bg-[#acbfa4]'}`}></div>
                         ))}
                     </div>
                 </div>

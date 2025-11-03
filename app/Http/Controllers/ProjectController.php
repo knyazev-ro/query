@@ -24,8 +24,12 @@ class ProjectController extends Controller
 
     public function show(Project $project)
     {
-        $stages = Stage::query()->orderBy('order', 'asc')->get();
-        $project->load(['stage', 'author']);
+        $pipelineId = $project->stage->pipeline_id;
+        $stages = Stage::query()
+            ->where('pipeline_id', $pipelineId)
+            ->orderBy('order', 'asc')
+            ->get();
+        $project->load(['stage.pipeline', 'author']);
 
         return Inertia::render('Projects/Project', compact(
             'project',

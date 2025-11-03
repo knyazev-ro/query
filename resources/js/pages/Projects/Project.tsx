@@ -1,6 +1,6 @@
-import Layout from '@/components/Layout';
-import PickManagerCell from '@/components/PickManagerCell';
-import PickPipelineCell from '@/components/PickPipelineCell';
+import Layout from '@/components/custom/Layout';
+import PickManagerCell from '@/components/custom/PickManagerCell';
+import PickPipelineCell from '@/components/custom/PickPipelineCell';
 import {
     HashtagIcon,
     MapIcon,
@@ -13,6 +13,7 @@ export default function Project({
     project,
     stages,
 }) {
+    console.log(stages)
     const [hoverStage, setHoverStage] = useState(null);
     const [editName, setEditName] = useState(false);
 
@@ -21,11 +22,12 @@ export default function Project({
             id: project.id,
             name: project?.name ?? '',
             //   amount: project?.amount ?? null,
-            pipeline: project?.pipeline ?? null,
+            pipeline: project?.stage?.pipeline ?? null,
             stage: project?.stage ?? null,
             author: project?.author ?? null,
             stage_id: project?.stage_id ?? null,
             description: project?.description ?? '',
+            pipeline_id: project?.stage?.pipeline_id ?? null,
         };
     };
 
@@ -39,7 +41,7 @@ export default function Project({
 
     const pickStageColor = (stage) => {
         const stageTypeColor = {
-            0: stage.options?.column_header_color ?? '#83B94C',
+            0: stage.options?.column_header_color ?? '#ff7f11',
             1: '#a1a7b7',
             2: '#4e9bed',
             3: '#fc3f5b',
@@ -51,7 +53,7 @@ export default function Project({
 
     const changeStyleOnHover = (stage, idx) => {
         const currentBkg =
-            data?.stage?.order >= stage.order ? '#3761E9' : '#a1a7b7';
+            data?.stage?.order >= stage.order ? '#ff1b1c' : '#acbfa4';
         return {
             backgroundColor: hoverStage
                 ? idx <= hoverStage
@@ -79,7 +81,7 @@ export default function Project({
 
     return (
         <Layout>
-            <div className="flex h-full h-screen flex-col overflow-y-hidden rounded-lg bg-white px-5 py-6 text-stone-950">
+            <div className="flex h-full h-screen flex-col overflow-y-hidden rounded-lg bg-[#262626] px-5 py-6 text-[#e2e8ce]">
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-2xl font-bold md:flex-nowrap">
                         <div className='flex gap-2'>
                                             <div className='flex items-center justify-center text-xs text-gray-400'>
@@ -130,7 +132,7 @@ export default function Project({
                     </div>
                 </div>
 
-                <div className="flex w-full bg-white text-sm font-bold">
+                <div className="flex w-full text-sm font-bold">
                     <div className="ml-7 flex w-full">
                         {stages.map((stage, idx) => (
                             <div
@@ -139,7 +141,7 @@ export default function Project({
                                     zIndex: stages.length - idx,
                                     position: 'relative',
                                 }}
-                                className="kanban-column -ml-7 flex min-w-0 flex-1 items-center justify-center rounded-l-lg bg-white px-1.5"
+                                className="kanban-column -ml-7 flex min-w-0 flex-1 items-center justify-center rounded-l-lg bg-[#262626] px-1.5"
                             >
                                 <div
                                     onClick={() => handleChangeStage(stage)}
@@ -217,7 +219,7 @@ export default function Project({
 
                 <div className="flex gap-2">
                     {/* Левая часть — красивая версия */}
-                    <div className="flex max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-white/60 p-4 backdrop-blur-md">
+                    <div className="flex max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#e2e8ce] p-4 backdrop-blur-md">
                         {/* Заголовок */}
                         <h2 className="mb-2 border-b pb-2 text-lg font-semibold text-gray-800">
                             Основные данные
@@ -229,7 +231,7 @@ export default function Project({
                                 Описание проекта
                             </label>
                             <input
-                                className="w-full rounded-xl border border-gray-300 p-2 text-sm transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                className="w-full rounded-xl border text-[#262626] border-gray-300 p-2 text-sm transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                 value={data.description}
                                 type="text"
                                 placeholder="Введите описание..."
