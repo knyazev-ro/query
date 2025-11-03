@@ -67,9 +67,15 @@ class ProjectController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'author_id' => 'nullable|integer',
-            'pipeline_id' => 'required|integer',
+            'pipeline_id' => 'nullable|integer',
             'stage_id' => 'required|integer',
         ]);
+
+        $pipelineId = $validated['pipeline_id'] ?? null;
+        if($pipelineId) {
+            $stage = Stage::query()->where('pipeline_id', $pipelineId)->orderBy('order', 'asc')->first();
+            $validated['stage_id'] = $stage->id;
+        }
 
         $project = Project::updateOrCreate([
             'id' => $id,

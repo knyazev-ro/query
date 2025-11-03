@@ -1,4 +1,5 @@
 import Layout from '@/components/custom/Layout';
+import Levels from '@/components/custom/Levels';
 import PickManagerCell from '@/components/custom/PickManagerCell';
 import PickPipelineCell from '@/components/custom/PickPipelineCell';
 import {
@@ -9,11 +10,8 @@ import {
 import { router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
-export default function Project({
-    project,
-    stages,
-}) {
-    console.log(stages)
+export default function Project({ project, stages }) {
+    console.log(stages);
     const [hoverStage, setHoverStage] = useState(null);
     const [editName, setEditName] = useState(false);
 
@@ -83,50 +81,52 @@ export default function Project({
         <Layout>
             <div className="flex h-full h-screen flex-col overflow-y-hidden rounded-lg bg-[#262626] px-5 py-6 text-[#e2e8ce]">
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-2xl font-bold md:flex-nowrap">
-                        <div className='flex gap-2'>
-                                            <div className='flex items-center justify-center text-xs text-gray-400'>
-                        <HashtagIcon className="w-3" />
-                        {project.id}
+                    <div className="flex gap-2">
+                        <div className="flex items-center justify-center text-xs text-gray-400">
+                            <HashtagIcon className="w-4" />
+                            {project.id}
                         </div>
+                        <Levels level={project.level} size={4}/>
 
-                    {editName ? (
-                        <div className="-m-2 flex w-full items-center gap-2">
-                            <input
-                                style={{
-                                    width: `${String(data.name || 0).length + 3}ch`,
-                                }}
-                                type="text"
-                                className="border-t-0 border-r-0 border-b-1 border-l-0 border-gray-300 px-2 py-1 text-2xl leading-none"
-                                value={data.name}
-                                onChange={(e) => {
-                                    setData('name', e.target.value);
-                                }}
-                                onBlur={() => {
-                                    setEditName(false);
-                                    handleEditDeal(data);
-                                }}
-                                autoFocus
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            <h1
-                                onClick={() => setEditName(true)}
-                                className="cursor-pointer text-2xl leading-none hover:underline"
-                            >
-                                {data.name ? (
-                                    data.name
-                                ) : (
-                                    <div className="text-gray-400">...</div>
-                                )}
-                            </h1>
-                        </div>
-                    )}
-                                            </div>
+                        {editName ? (
+                            <div className="-m-2 flex w-full items-center gap-2">
+                                <input
+                                    style={{
+                                        width: `${String(data.name || 0).length + 3}ch`,
+                                    }}
+                                    type="text"
+                                    className="border-t-0 border-r-0 border-b-1 border-l-0 border-gray-300 px-2 py-1 text-2xl leading-none"
+                                    value={data.name}
+                                    onChange={(e) => {
+                                        setData('name', e.target.value);
+                                    }}
+                                    onBlur={() => {
+                                        setEditName(false);
+                                        handleEditDeal(data);
+                                    }}
+                                    autoFocus
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <h1
+                                    onClick={() => setEditName(true)}
+                                    className="cursor-pointer text-2xl leading-none hover:underline"
+                                >
+                                    {data.name ? (
+                                        data.name
+                                    ) : (
+                                        <div className="text-gray-400">...</div>
+                                    )}
+                                </h1>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center justify-center">
                         <button
-                        onClick={() => handleEditDeal(data)}
-                         className='bg-[#7700ff] text-white rounded-xs font-semibold text-sm p-2'>
+                            onClick={() => handleEditDeal(data)}
+                            className="rounded-xs bg-[#7700ff] p-2 text-sm font-semibold text-white"
+                        >
                             Сохранить
                         </button>
                     </div>
@@ -206,9 +206,7 @@ export default function Project({
                             <UserCircleIcon className="w-6 fill-blue-50 text-blue-400" />
                         </div>
                         <div className="flex flex-col">
-                            <div className="text-stone-500/80">
-                                {'Автор'}
-                            </div>
+                            <div className="text-stone-500/80">{'Автор'}</div>
                             <PickManagerCell
                                 data={data}
                                 handleEditDeal={handleEditDeal}
@@ -231,19 +229,19 @@ export default function Project({
                                 Описание проекта
                             </label>
                             <input
-                                className="w-full rounded-xl border text-[#262626] border-gray-300 p-2 text-sm transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                className="w-full rounded-xl border border-gray-300 p-2 text-sm text-[#262626] transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                 value={data.description}
                                 type="text"
                                 placeholder="Введите описание..."
                                 onChange={(e) => {
-                                    setData('description', e.target.value)
+                                    setData('description', e.target.value);
                                 }}
                             />
                         </div>
                     </div>
 
                     {/* Правая часть */}
-                    <div className='flex flex-col max-w-2/3'>
+                    <div className="flex max-w-2/3 flex-col">
                         {/* График */}
                     </div>
                 </div>

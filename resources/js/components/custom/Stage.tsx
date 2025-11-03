@@ -22,7 +22,7 @@ export default function Stage({ stage, isOver }) {
             key={stage.id}
             className={`w-96 flex-shrink-0 min-h-[400px] border-gray-200 p-4 text-stone-950`}
         >
-            <h3 className="text-md kanban-column mb-4 bg-[#ff1b1c] p-3 font-semibold text-white">
+            <h3 className="text-md kanban-column mb-4 bg-[#5d9948] p-3 font-semibold text-white">
                 {stage.name.toUpperCase()}
             </h3>
             <div className="space-y-3">

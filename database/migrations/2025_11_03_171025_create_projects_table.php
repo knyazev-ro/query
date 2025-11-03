@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('author_id')->constrained('users');
             $table->foreignId('stage_id')->nullable()->constrained('stages')->nullOnDelete();
             $table->timestamp('stage_changed_at')->nullable();
+            $table->unsignedTinyInteger('level')->default(0);
             $table->timestamps();
         });
     }

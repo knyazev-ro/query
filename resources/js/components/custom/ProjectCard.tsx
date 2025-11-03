@@ -6,6 +6,7 @@ import {
     EllipsisVerticalIcon,
 } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
+import Levels from './Levels';
 
 export default function ProjectCard({ project }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -26,9 +27,6 @@ export default function ProjectCard({ project }) {
     const handleDeleteProject = () => {
         router.post(route('projects.delete', project.id));
     };
-
-    const level = 4;
-    const levels = [false, false, false, false, false].map((e, idx) => level >= (idx + 1) ? true : false)
 
     const images = [
         'https://t3.ftcdn.net/jpg/16/81/25/58/360_F_1681255802_3JLKAyEmo93FKXX3rEoIGJ4cHzQkRRFU.jpg',
@@ -74,11 +72,7 @@ export default function ProjectCard({ project }) {
                             {project.name.toUpperCase()}
                         </button>
                     </div>
-                    <div className="flex items-center justify-between gap-1.5 px-1">
-                        {levels.map((e) => (
-                            <div className={`h-2 w-2 rounded-full ${e ? 'bg-[#ff1b1c]' : 'bg-[#acbfa4]'}`}></div>
-                        ))}
-                    </div>
+                    <Levels level={project.level} />
                 </div>
 
                 <div className="mb-2 text-xs text-gray-600">

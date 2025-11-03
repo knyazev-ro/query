@@ -48,6 +48,7 @@ class ProjectSeeder extends Seeder
                         'author_id' => User::inRandomOrder()->value('id') ?? 1, // случайный пользователь или 1
                         'stage_id' => $stage->id,
                         'stage_changed_at' => Carbon::now()->subDays(rand(1, 60)),
+                        'level' => fake()->numberBetween(1, 5),
                     ]);
                 }
             }
