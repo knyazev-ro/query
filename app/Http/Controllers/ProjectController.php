@@ -29,7 +29,14 @@ class ProjectController extends Controller
             ->where('pipeline_id', $pipelineId)
             ->orderBy('order', 'asc')
             ->get();
-        $project->load(['stage.pipeline', 'author']);
+        $project->load([
+        'stage.pipeline', 
+        'author', 
+        'client.entity', 
+        'client.contacts',
+        'client.contacts.phones',
+        'client.contacts.emails',
+    ]);
 
         return Inertia::render('Projects/Project', compact(
             'project',
@@ -70,8 +77,9 @@ class ProjectController extends Controller
             'pipeline_id' => 'nullable|integer',
             'stage_id' => 'required|integer',
             'level' => 'nullable|integer',
+            'amount' => 'nullable|integer',
         ]);
-
+        $validated['amount'] = $validated['amount'] ?? 0;
         $pipelineId = $validated['pipeline_id'] ?? null;
         if($pipelineId) {
             $stage = Stage::query()->where('pipeline_id', $pipelineId)->orderBy('order', 'asc')->first();

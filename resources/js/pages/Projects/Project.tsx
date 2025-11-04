@@ -1,8 +1,11 @@
+import ClientCompanyCard from '@/components/custom/ClientCompanyCard';
+import Feed from '@/components/custom/Feed';
 import Layout from '@/components/custom/Layout';
 import Levels from '@/components/custom/Levels';
 import PickManagerCell from '@/components/custom/PickManagerCell';
 import PickPipelineCell from '@/components/custom/PickPipelineCell';
 import {
+    CurrencyYenIcon,
     HashtagIcon,
     MapIcon,
     UserCircleIcon,
@@ -19,13 +22,14 @@ export default function Project({ project, stages }) {
         return {
             id: project.id,
             name: project?.name ?? '',
-            //   amount: project?.amount ?? null,
+            amount: project?.amount ?? null,
             pipeline: project?.stage?.pipeline ?? null,
             stage: project?.stage ?? null,
             author: project?.author ?? null,
             stage_id: project?.stage_id ?? null,
             description: project?.description ?? '',
             pipeline_id: project?.stage?.pipeline_id ?? null,
+            client: project?.client ?? null,
         };
     };
 
@@ -86,7 +90,7 @@ export default function Project({ project, stages }) {
                             <HashtagIcon className="w-4" />
                             {project.id}
                         </div>
-                        <Levels level={project.level} size={4}/>
+                        <Levels level={project.level} size={4} />
 
                         {editName ? (
                             <div className="-m-2 flex w-full items-center gap-2">
@@ -123,12 +127,12 @@ export default function Project({ project, stages }) {
                         )}
                     </div>
                     <div className="flex items-center justify-center">
-                        <button
+                        {/* <button
                             onClick={() => handleEditDeal(data)}
                             className="rounded-xs bg-[#7700ff] p-2 text-sm font-semibold text-white"
                         >
                             Сохранить
-                        </button>
+                        </button> */}
                     </div>
                 </div>
 
@@ -160,33 +164,35 @@ export default function Project({ project, stages }) {
                 {/* Горизонтальная информация */}
                 <div className="flex w-full flex-col items-center justify-between border-b-1 border-stone-300 px-16 py-2 text-sm md:flex-row">
                     {/* amount */}
-                    {/* <div className="flex h-full items-center gap-2 px-16 hover:bg-orange-500/5 py-2">
-          <div>
-            <CashIcon className="w-6 text-yellow-500 fill-yellow-100" />
-          </div>
-          <div className="flex flex-col">
-            <div className="text-stone-500/80">{t('crm:totalSum')}</div>
-            <div className="-translate-x-1.5 flex items-center">
-              <input
-                className="appearance-none  hover:underline border-none focus:border-b-1 text-sm h-4 px-1 text-right"
-                type="number"
-                value={data.amount}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val.length <= 12) {
-                    setData('amount', val);
-                  }
-                }}
-                onBlur={() => {
-                  handleEditDeal(data);
-                }}
-                style={{ width: `${String(data.amount || 0).length + 3}ch` }}
-              />
+                    <div className="flex h-full items-center gap-2 px-16 py-2 hover:bg-orange-500/5">
+                        <div>
+                            <CurrencyYenIcon className="w-6 fill-yellow-100 text-yellow-500" />
+                        </div>
+                        <div className="flex flex-col">
+                            <div className="text-stone-500/80">{'Сумма'}</div>
+                            <div className="flex -translate-x-1.5 items-center">
+                                <input
+                                    className="h-4 appearance-none border-none px-1 text-right text-sm hover:underline focus:border-b-1"
+                                    type="number"
+                                    value={data.amount}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val.length <= 12) {
+                                            setData('amount', val);
+                                        }
+                                    }}
+                                    onBlur={() => {
+                                        handleEditDeal(data);
+                                    }}
+                                    style={{
+                                        width: `${String(data.amount || 0).length + 3}ch`,
+                                    }}
+                                />
 
-              <div className="-translate-x-2"></div>
-            </div>
-          </div>
-        </div> */}
+                                <div className="-translate-x-2"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="flex h-full items-center gap-2 px-16 hover:bg-indigo-50/50">
                         <div>
@@ -217,7 +223,7 @@ export default function Project({ project, stages }) {
 
                 <div className="flex gap-2">
                     {/* Левая часть — красивая версия */}
-                    <div className="flex max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#e2e8ce] p-4 backdrop-blur-md">
+                    <div className="flex max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#fcfff3] p-4 backdrop-blur-md">
                         {/* Заголовок */}
                         <h2 className="mb-2 border-b pb-2 text-lg font-semibold text-gray-800">
                             Основные данные
@@ -229,7 +235,7 @@ export default function Project({ project, stages }) {
                                 Описание проекта
                             </label>
                             <input
-                                className="w-full rounded-xl border border-gray-300 p-2 text-sm text-[#262626] transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                                className="w-full rounded-xs border border-gray-300 p-2 text-sm text-[#262626] transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                 value={data.description}
                                 type="text"
                                 placeholder="Введите описание..."
@@ -238,11 +244,14 @@ export default function Project({ project, stages }) {
                                 }}
                             />
                         </div>
+
+                            <ClientCompanyCard client={data.client}/>
+
                     </div>
 
                     {/* Правая часть */}
-                    <div className="flex max-w-2/3 flex-col">
-                        {/* График */}
+                    <div className="flex max-w-2/3 w-full flex-col ">
+                        <Feed/>
                     </div>
                 </div>
             </div>

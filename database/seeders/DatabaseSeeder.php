@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Contact;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -19,13 +20,16 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'test@aa.com'],
             [
-                'name' => 'test',
+                'name' => 'Abraham',
+                'last_name' => 'Serizel',
                 'password' => Hash::make('123'),
                 'email_verified_at' => now(),
             ]
         );
 
         $this->call([
+            ContactSeeder::class,
+            ClientSeeder::class,
             ProjectSeeder::class,
         ]);
     }

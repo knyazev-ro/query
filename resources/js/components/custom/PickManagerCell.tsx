@@ -31,7 +31,7 @@ async function fetchUsers(search, page = 1) {
 }
 
 export default function PickManagerCell({ data, handleEditDeal }) {
-  const Name = data?.manager?.last_name ?? '';
+  const Name = data?.author?.last_name ?? '';
   const NameWidth = `calc(${Name.length}ch + 4ch)`;
 
   const loadResponsible = (search, loadedOptions, { page }) => {
@@ -49,7 +49,7 @@ export default function PickManagerCell({ data, handleEditDeal }) {
     <Menu as="div" className="relative w-full">
       <Menu.Button as={Fragment}>
         <div className="flex items-center whitespace-nowrap cursor-pointer">
-          {data.manager?.last_name ?? "Добавить"}
+          {data.author?.last_name ?? "Добавить"}
         </div>
       </Menu.Button>
 
@@ -65,10 +65,10 @@ export default function PickManagerCell({ data, handleEditDeal }) {
               loadOptions={loadResponsible}
               additional={{ page: 1 }}
               value={
-                data?.manager?.id
+                data?.author?.id
                   ? {
-                      label: data?.manager?.last_name ?? '',
-                      value: data?.manager?.id ?? null,
+                      label: data?.author?.last_name ?? '',
+                      value: data?.author?.id ?? null,
                     }
                   : null
               }

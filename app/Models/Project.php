@@ -52,4 +52,9 @@ class Project extends Model
     {
         return LogOptions::defaults()->logOnlyDirty();
     }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
 }

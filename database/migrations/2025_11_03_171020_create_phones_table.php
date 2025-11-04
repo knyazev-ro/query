@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PhoneType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +15,7 @@ return new class extends Migration
         Schema::create('phones', function (Blueprint $table) {
             $table->id();
             $table->string('phone');
-            $table->string('type');
+            $table->string('type')->default(PhoneType::WORK->value);
             $table->timestamps();
         });
     }
