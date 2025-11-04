@@ -1,6 +1,5 @@
-import { BellIcon, ChatBubbleOvalLeftEllipsisIcon, NewspaperIcon, PhoneArrowUpRightIcon } from '@heroicons/react/16/solid';
+import { PhoneArrowUpRightIcon } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
-import { BoxIcon, DiscIcon } from 'lucide-react';
 
 export default function Contacts({collapsed, index}) {
     return (

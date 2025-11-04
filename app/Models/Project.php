@@ -21,6 +21,8 @@ class Project extends Model
         'stage_id',
         'stage_changed_at',
         'level',
+        'amount',
+        'client_id',
     ];
 
     public function stage(): BelongsTo

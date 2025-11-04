@@ -1,6 +1,5 @@
-import { BellIcon, ChatBubbleOvalLeftEllipsisIcon, NewspaperIcon, PhoneArrowUpRightIcon, UsersIcon } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
-import { BoxIcon, DiscIcon, ImageIcon } from 'lucide-react';
+import { ImageIcon } from 'lucide-react';
 
 export default function Media({collapsed, index}) {
     return (

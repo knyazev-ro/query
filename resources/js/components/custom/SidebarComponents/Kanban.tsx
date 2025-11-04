@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { BoxIcon, DiscIcon } from 'lucide-react';
+import { DiscIcon } from 'lucide-react';
 
 export default function Kanban({collapsed, index}) {
     return (

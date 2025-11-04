@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Client;
 use Illuminate\Database\Seeder;
 use App\Models\Pipeline;
 use App\Models\Stage;
@@ -49,6 +50,8 @@ class ProjectSeeder extends Seeder
                         'stage_id' => $stage->id,
                         'stage_changed_at' => Carbon::now()->subDays(rand(1, 60)),
                         'level' => fake()->numberBetween(1, 5),
+                        'amount' => fake()->numberBetween(20 ,100000),
+                        'client_id' => Client::inRandomOrder()->first()->id ?? null,
                     ]);
                 }
             }
