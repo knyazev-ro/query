@@ -80,7 +80,7 @@ export default function Kanban({ stages: initialStages, pipelines }) {
                     onDragEnd={handleDragEnd}
                     onDragOver={handleDragOver}
                 >
-                    <div className="flex h-full px-2 overflow-x-auto bg-[#262626]">
+                    <div className="flex h-full px-4 justify-between overflow-x-auto bg-[#262626]">
                         {stages?.map((stage, idx) => (
                             <Stage
                                 key={stage.id}

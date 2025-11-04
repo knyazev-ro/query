@@ -38,7 +38,7 @@ export default function Sidebar() {
                 collapsed ? 'w-28' : 'w-96'
             }`}
         >
-            <div className="flex w-full items-center justify-center">
+            <div className="flex w-full py-2 items-center justify-center">
                 {collapsed ? <Icon /> : <IconDetailed />}
             </div>
             {/* Кнопка сворачивания */}

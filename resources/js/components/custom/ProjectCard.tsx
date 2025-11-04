@@ -56,11 +56,13 @@ export default function ProjectCard({ project }) {
                 ))}
             </div>
             <div className="flex flex-col px-2">
-                <div className="mb-1 flex items-center gap-2 py-2">
+                <div className="mb-1 flex justify-between items-center gap-2 py-2">
                     <div className="flex items-center gap-1">
-                        <div>
-                            <EllipsisVerticalIcon className="w-5 text-[#acbfa4]" />
-                        </div>
+                        <button
+                        className='cursor-pointer rounded-full p-1 transition-all hover:bg-[#ff7f11] hover:text-[#fcfff3] text-[#acbfa4]'
+                        >
+                            <EllipsisVerticalIcon className="w-5" />
+                        </button>
                         <button
                             onPointerDown={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
