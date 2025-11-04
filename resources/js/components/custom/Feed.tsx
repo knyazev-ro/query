@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import CommentaryMessageBlock from './CommentaryMessageBlock';
+import EventFeed from './EventFeed';
 import Filters from './Filters';
 import InputBlock from './InputBlock';
-import CommentaryMessageBlock from './CommentaryMessageBlock';
+import TaskBlock from './TaskBlock';
+import TaskFeed from './TaskFeed';
 
 export default function Feed() {
     const [filters, setFilters] = useState([
@@ -12,12 +15,15 @@ export default function Feed() {
     ]);
 
     return (
-        <div className="flex flex-col">
+        <div className="flex h-screen flex-col">
             <InputBlock />
             <Filters />
             {/* Feed */}
-            <div className='flex flex-col px-2 py-4'>
-                <CommentaryMessageBlock/>
+            <div className="flex flex-col px-2 gap-3 py-4">
+                <EventFeed />
+                <TaskFeed/>
+                <CommentaryMessageBlock />
+                <EventFeed />
             </div>
         </div>
     );
