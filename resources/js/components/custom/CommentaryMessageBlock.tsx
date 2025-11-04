@@ -3,7 +3,7 @@ import { HeartIcon } from 'lucide-react';
 
 export default function CommentaryMessageBlock() {
     return (
-        <div className="flex justify-between gap-4 border-b-1 border-[#81b64c] px-2 py-4">
+        <div className="flex justify-between gap-4 border-b-1 border-[#81b64c] bg-[#acbfa4]/10 px-2 py-4">
             <div className="h-full">
                 <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#81b64c] text-center">
                     <StarIcon className="w-5" />
@@ -15,7 +15,7 @@ export default function CommentaryMessageBlock() {
                 <div className="mt-4 flex flex-col gap-2">
                     <div className="py-1">
                         {
-                            'Хочешь, я покажу конкретный пример миграций и моделей Laravel для этой структуры (company ↔ contacts ↔ phones)?'
+                            'But I must explain to you how all this mistaken idea of reprobating pleasure and extolling pain arose. To do so, I will give you a complete account of the system and expound the teachings of the great explorer of the truth, the master-builder of human happiness. No one rejects, dislikes or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure rationally encounter extremely painful consequences.'
                         }
                     </div>
 

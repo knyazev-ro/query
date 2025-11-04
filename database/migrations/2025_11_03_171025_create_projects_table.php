@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamp('stage_changed_at')->nullable();
             $table->unsignedTinyInteger('level')->default(0);
             $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
-            $table->bigInteger('amount')->nullable();
+            $table->double('amount')->nullable();
             $table->timestamps();
         });
     }

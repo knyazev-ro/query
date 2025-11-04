@@ -97,7 +97,7 @@ export default function ProjectCard({ project }) {
                 <div className="grid w-full grid-cols-3 items-center justify-between py-2 text-xs">
                     <div className="flex w-full items-center justify-start gap-1">
                         <CurrencyYenIcon className="w-4 text-[#ff7f11]" />
-                        <span>{'22500.00'}</span>
+                        <span>{project.amount}</span>
                     </div>
                     <div className="flex w-full items-center justify-center gap-1">
                         <BriefcaseIcon className="w-4 min-w-4 text-[#acbfa4]" />
