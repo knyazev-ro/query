@@ -74,7 +74,7 @@ export default function ProjectCard({ project }) {
                             {project.name.toUpperCase()}
                         </button>
                     </div>
-                    <Levels level={project.level} />
+                    <Levels level={project.level} size={2}/>
                 </div>
 
                 <div className="mb-2 text-xs text-gray-600">

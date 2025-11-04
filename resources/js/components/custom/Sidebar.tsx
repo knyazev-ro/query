@@ -7,6 +7,13 @@ import { useState } from 'react';
 import Kanban from './SidebarComponents/Kanban';
 import User from './SidebarComponents/User';
 import Settings from './SidebarComponents/Settings';
+import Notifications from './SidebarComponents/Notifications';
+import Messages from './SidebarComponents/Messages';
+import Feed from './SidebarComponents/Feed';
+import Clients from './SidebarComponents/Clients';
+import Contacts from './SidebarComponents/Contacts';
+import Users from './SidebarComponents/Users';
+import Media from './SidebarComponents/Media';
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(
@@ -15,21 +22,19 @@ export default function Sidebar() {
 
     const menuItems = [
         { name: 'Канбан', component: Kanban },
-        //     { name: 'Дешборд', href: route('board.index'), icon: ChartBarIcon },
-        //     { name: 'Отчеты', href: route('reports.index'), icon: PaperClipIcon },
-        //     { name: 'Проекты', href: route('projects.index'), icon: GitBranchPlus },
-        //     { name: 'Пользователи', href: route('users.index'), icon: UserRoundCog },
-        //     { name: 'Ассистент', href: route('chat.chat'), icon: BotIcon },
+        { name: 'Уведомления', component: Notifications },
+        { name: 'Сообщения', component: Messages },
+        { name: 'Лента', component: Feed },
+        { name: 'Клиенты', component: Clients },
+        { name: 'Контакты', component: Contacts },
+        { name: 'Пользователи', component: Users },
+        { name: 'Медиа', component: Media },
+
     ];
 
     const bottomItems = [
         { name: 'Канбан', component: User, icon: UserCircleIcon },
         { name: 'Настройки', component: Settings, icon: CogIcon },
-        //     { name: 'Дешборд', href: route('board.index'), icon: ChartBarIcon },
-        //     { name: 'Отчеты', href: route('reports.index'), icon: PaperClipIcon },
-        //     { name: 'Проекты', href: route('projects.index'), icon: GitBranchPlus },
-        //     { name: 'Пользователи', href: route('users.index'), icon: UserRoundCog },
-        //     { name: 'Ассистент', href: route('chat.chat'), icon: BotIcon },
     ];
 
     return (

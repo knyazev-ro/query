@@ -69,6 +69,7 @@ class ProjectController extends Controller
             'author_id' => 'nullable|integer',
             'pipeline_id' => 'nullable|integer',
             'stage_id' => 'required|integer',
+            'level' => 'nullable|integer',
         ]);
 
         $pipelineId = $validated['pipeline_id'] ?? null;
