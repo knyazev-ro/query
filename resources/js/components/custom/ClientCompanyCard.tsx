@@ -6,7 +6,7 @@ export default function ClientCompanyCard({ client }) {
     const contacts = client?.contacts ?? [];
     console.log(contacts);
     return (
-        <div className="flex w-full flex-col gap-4 text-[#262626]">
+        <div className="flex w-full flex-col gap-4 text-[#262626]"> 
             <div className="flex flex-col rounded-xs border border-[#acbfa4] p-1">
                 <div className="font-semibold">Компания</div>
                 <div className="flex w-full flex-col p-2">

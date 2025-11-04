@@ -15,11 +15,11 @@ export default function Feed() {
     ]);
 
     return (
-        <div className="flex h-screen flex-col">
+        <div className="flex flex-col">
             <InputBlock />
             <Filters />
             {/* Feed */}
-            <div className="flex flex-col px-2 gap-3 py-4">
+            <div className="flex flex-col h-full px-2 gap-3 py-4">
                 <EventFeed />
                 <TaskFeed/>
                 <CommentaryMessageBlock />

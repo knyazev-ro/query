@@ -83,7 +83,7 @@ export default function Project({ project, stages }) {
 
     return (
         <Layout>
-            <div className="flex h-full h-screen flex-col overflow-y-hidden rounded-lg bg-[#262626] px-5 py-6 text-[#e2e8ce]">
+            <div className="flex h-full flex-col overflow-y-hidden rounded-lg bg-[#262626] px-5 py-6 text-[#e2e8ce]">
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-2xl font-bold md:flex-nowrap">
                     <div className="flex gap-2">
                         <div className="flex items-center justify-center text-xs text-gray-400">
@@ -221,9 +221,9 @@ export default function Project({ project, stages }) {
                     </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex h-fit gap-2 overflow-y-auto">
                     {/* Левая часть — красивая версия */}
-                    <div className="flex max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#fcfff3] p-4 backdrop-blur-md">
+                    <div className="flex h-fit max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#fcfff3] p-4 backdrop-blur-md">
                         {/* Заголовок */}
                         <h2 className="mb-2 border-b pb-2 text-lg font-semibold text-gray-800">
                             Основные данные
@@ -245,13 +245,12 @@ export default function Project({ project, stages }) {
                             />
                         </div>
 
-                            <ClientCompanyCard client={data.client}/>
-
+                        <ClientCompanyCard client={data.client} />
                     </div>
 
                     {/* Правая часть */}
-                    <div className="flex max-w-2/3 w-full flex-col ">
-                        <Feed/>
+                    <div className="flex w-full max-w-2/3 flex-col">
+                        <Feed />
                     </div>
                 </div>
             </div>

@@ -20,7 +20,7 @@ export default function Stage({ stage, isOver, idx }) {
             ref={setNodeRef}
             style={style}
             key={stage.id}
-            className={`min-h-[400px] min-w-96 lg:w-1/4 flex-shrink-0 border-gray-200 p-4 text-stone-950`}
+            className={`min-h-[400px] min-w-96 lg:w-120 flex-shrink-0 border-gray-200 p-4 text-stone-950`}
         >
             <StageHeader stage={stage} idx={idx}/>
             <div className="space-y-3">
