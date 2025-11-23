@@ -1,7 +1,7 @@
 import imageExtensions from 'image-extensions';
 import isHotkey from 'is-hotkey';
 import isUrl from 'is-url';
-import React, { KeyboardEvent, useCallback, useMemo } from 'react';
+import React, { KeyboardEvent, useCallback, useEffect, useMemo } from 'react';
 import { createEditor, Editor, Transforms } from 'slate';
 import { withHistory } from 'slate-history';
 import {
@@ -9,7 +9,6 @@ import {
     RenderElementProps,
     RenderLeafProps,
     Slate,
-    useSlateStatic,
     withReact,
 } from 'slate-react';
 import {
@@ -135,13 +134,13 @@ const withEmbeds = (editor: CustomEditor) => {
 
     editor.insertData = (data) => {
         let text = data.getData('text/plain');
-            text = text.trim();
-            const url = getSafeUrl(text);
-            if (url !== 'about:blank') {
-                insertVideo(editor, url);
-                return;
-            }
-        
+        text = text.trim();
+        const url = getSafeUrl(text);
+        if (url !== 'about:blank') {
+            insertVideo(editor, url);
+            return;
+        }
+
         insertData(data);
         return;
     };
@@ -274,7 +273,21 @@ const Element = (props: RenderElementProps) => {
     }
 };
 
-export default function RichTextEditor({ value, setValue }) {
+const handleToolbarClick = (editor, hotkey: string) => {
+    const embedType = HOTKEYS_EMBED[hotkey];
+    if (embedType === 'video' && editor?.selection) {
+        const url = getSafeUrl(Editor.string(editor, editor.selection));
+        console.log('URL:', url);
+        if (url !== 'about:blank') {
+            insertVideo(editor, url);
+        }
+    } else if(HOTKEYS[hotkey] === 'bold') {
+        const mark = HOTKEYS[hotkey];
+        toggleMark(editor, mark);
+    }
+};
+
+export default function RichTextEditor({ value, setValue, hotKeyOutside }) {
     const renderElement = useCallback(
         (props: RenderElementProps) => <Element {...props} />,
         [],
@@ -288,6 +301,11 @@ export default function RichTextEditor({ value, setValue }) {
         () => withEmbeds(withImages(withHistory(withReact(createEditor())))),
         [],
     );
+    useEffect(() => {
+        if (hotKeyOutside) {
+            handleToolbarClick(editor, hotKeyOutside);
+        }
+    }, [hotKeyOutside]);
 
     return (
         <Slate editor={editor} onValueChange={setValue} initialValue={value}>
@@ -311,12 +329,13 @@ export default function RichTextEditor({ value, setValue }) {
                             event.preventDefault();
                             const embedType = HOTKEYS_EMBED[hotkey];
                             if (embedType === 'video' && editor?.selection) {
-                                const url = getSafeUrl(Editor.string(editor, editor.selection))
+                                const url = getSafeUrl(
+                                    Editor.string(editor, editor.selection),
+                                );
                                 if (url !== 'about:blank') {
                                     insertVideo(editor, url);
-                                } 
+                                }
                             }
-                                
                         }
                     }
                 }}
