@@ -68,7 +68,7 @@ class FileManager
                 }
 
                 return $fileDto;
-            })->filter(fn ($e) => ! $e->toDelete);
+            })->filter(fn ($file) => ! $file->toDelete);
 
     }
 }

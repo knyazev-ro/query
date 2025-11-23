@@ -4,7 +4,6 @@ import Contacts from './Contacts';
 export default function ClientCompanyCard({ client }) {
     const entity = client.entity;
     const contacts = client?.contacts ?? [];
-    console.log(contacts);
     return (
         <div className="flex w-full flex-col gap-4 text-[#262626]"> 
             <div className="flex flex-col rounded-xs border border-[#acbfa4] p-1">

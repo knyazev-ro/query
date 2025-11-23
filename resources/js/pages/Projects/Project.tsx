@@ -14,7 +14,6 @@ import { router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 export default function Project({ project, stages }) {
-    console.log(stages);
     const [hoverStage, setHoverStage] = useState(null);
     const [editName, setEditName] = useState(false);
 
@@ -50,8 +49,6 @@ export default function Project({ project, stages }) {
         };
         return stageTypeColor[stage?.type] ?? '#83B94C';
     };
-
-    console.log(project);
 
     const changeStyleOnHover = (stage, idx) => {
         const currentBkg =

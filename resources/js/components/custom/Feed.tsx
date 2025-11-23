@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import CommentaryMessageBlock from './CommentaryMessageBlock';
+import CommentaryMessageBlock from './CommentaryComponents/CommentaryMessageBlock';
 import EventFeed from './EventFeed';
 import Filters from './Filters';
-import InputBlock from './InputBlock';
+import InputBlock from './CommentaryComponents/InputBlock';
 import TaskBlock from './TaskBlock';
 import TaskFeed from './TaskFeed';
 

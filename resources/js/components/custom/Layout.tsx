@@ -14,7 +14,6 @@ export function Errors({ errors }: { errors: Record<string, string> }) {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
     const { errors } = usePage().props;
-    console.log(usePage().props)
     const [showErr, setShowErr] = useState(false);
     const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
 

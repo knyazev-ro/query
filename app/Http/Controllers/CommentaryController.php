@@ -41,24 +41,27 @@ class CommentaryController extends Controller
         ]);
 
         try {
-            $dto = new CommentaryDTO();
-            $dto->entityId = $entityId;
-            $dto->entityType = static::$entityModel;
-            $dto->masterId = $validated['master_id'] ?? null;
-            $dto->masterType = $validated['master_type'] ?? null;
-            $dto->content = $validated['content'];
-            $dto->files = $validated['files'] ? collect($validated['files'])->map(function($item) {
-                $fileDto = new Files();
-                $fileDto->id = $item['id'] ?? null;
-                $fileDto->file = $item['file'] ?? null;
-                $fileDto->toDelete = $item['toDelete'] ?? false;
-                return $fileDto;
-            }) : null;
-            $this->commentaryService->store($dto);
+            $dto = new CommentaryDTO(
+                entityId: $entityId,
+                entityType: static::$entityModel,
+                masterId: $validated['master_id'] ?? null,
+                masterType: $validated['master_type'] ?? null,
+                content: $validated['content'],
+                files: $validated['files'] ? collect($validated['files'])->map(function ($item) {
+                    $fileDto = new Files(
+                        id: $item['id'] ?? null,
+                        file: $item['file'] ?? null,
+                        path: $item['path'] ?? null,
+                        toDelete: $item['toDelete'] ?? false,
+                    );
+                    return $fileDto;
+                }) : null,
 
+            );
+            $this->commentaryService->store($dto);
             return Redirect::back();
         } catch (\Exception $e) {
-            return Redirect::back()->withErrors('Failed to store commentary: '.$e->getMessage());
+            return Redirect::back()->withErrors('Failed to store commentary: ' . $e->getMessage());
         }
     }
 }
