@@ -6,7 +6,7 @@ export default function InputBlock() {
         {
             name: 'Комментарий',
             current: true,
-            component: <div></div>,
+            component: <CommentaryInputBlock />,
         },
         {
             name: 'Создать задачу',
@@ -44,7 +44,9 @@ export default function InputBlock() {
                     </div>
                 ))}
             </div>
-            <CommentaryInputBlock />
+            <div className='transition-all duration-300'>
+            {tabs.find((tab) => tab.current)?.component ?? null}
+            </div>
         </div>
     );
 }

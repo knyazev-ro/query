@@ -8,9 +8,12 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 class FileLocation extends Model
 {
     protected $fillable = [
-        "entity_id",
         "entity_type",
+        "entity_id",
+        "author_id",
+        "name",
         "path",
+        "ext",
     ];
 
     public function entity(): MorphTo

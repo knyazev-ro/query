@@ -7,8 +7,11 @@ import {
 } from '@heroicons/react/16/solid';
 import { useForm } from '@inertiajs/react';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
+import { useRef } from 'react';
+import PlainTextExample from './PlainTextExample';
 
 export default function CommentaryBlock() {
+    const quillRef = useRef();
     const { data, setData } = useForm({
         message: '',
         files: [],
@@ -22,13 +25,14 @@ export default function CommentaryBlock() {
                 </div>
             </div>
             <div className="flex h-full w-full items-center p-2">
-                <TextareaAutosize
+                {/* <TextareaAutosize
                     aria-label="empty textarea"
                     placeholder="Введите комментарий..."
                     value={data.message}
                     onChange={(e) => setData('message', e.target.value)}
                     className="focus:ring-none w-full resize-none font-medium text-[#262626]/80 transition-all outline-none focus:border-none focus:outline-none"
-                />
+                /> */}
+                <PlainTextExample/>
             </div>
             <div className="flex h-full flex-col justify-end">
                 <div className="z-10 flex gap-6 px-4 py-4">

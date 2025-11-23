@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->morphs('entity');
             $table->string('path');
+            $table->string('name');
             $table->string('ext');
             $table->foreignId('author_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

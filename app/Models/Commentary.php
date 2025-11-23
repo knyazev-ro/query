@@ -9,4 +9,11 @@ class Commentary extends Model
 {
     /** @use HasFactory<\Database\Factories\CommentaryFactory> */
     use HasFactory;
+
+    protected $fillable = [
+        'entity_id',
+        'entity_type',
+        'master_id',
+        'master_type',        
+    ];
 }

@@ -17,7 +17,7 @@ class CommentaryFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            
         ];
     }
 }

@@ -1,6 +1,5 @@
 import { usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import Header from './Header';
 import Sidebar from './Sidebar';
 
 export function Errors({ errors }: { errors: Record<string, string> }) {

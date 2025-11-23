@@ -24,13 +24,13 @@ export default function User({ collapsed, index }) {
         <Menu as={'div'} className={'relative'}>
             <MenuButton
                 as="div"
-                className={`flex cursor-pointer items-center gap-3 px-4 py-4 transition hover:bg-[#ff1b1c] ${
+                className={`flex cursor-pointer items-center bg-[#acbfa4] gap-3 px-4 py-4 transition hover:bg-[#ff1b1c] ${
                     collapsed ? 'justify-center' : ''
                 }`}
             >
-                <UserCircleIcon className="h-5 w-5 text-[#fcfff3]" />
+                <UserCircleIcon className="h-5 w-5" />
                 {!collapsed && (
-                    <span className="text-sm font-medium text-[#fcfff3]">
+                    <span className="text-sm font-medium">
                         {'Профиль'}
                     </span>
                 )}
