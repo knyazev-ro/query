@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('feeds', function (Blueprint $table) {
             $table->id();
+            $table->morphs('resource');
             $table->morphs('master');
-            $table->morphs('entity');
             $table->timestamps();
         });
     }

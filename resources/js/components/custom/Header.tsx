@@ -1,19 +1,20 @@
+import IconDetailed from '@/assets/IconDetailed';
 import { router } from '@inertiajs/react';
 import { ChartArea } from 'lucide-react';
 import { route } from 'ziggy-js';
 
 export default function Header() {
     return (
-        <div className="text-md rubik top-0 flex h-16 w-screen min-w-screen items-center justify-between border-b-2 border-[#7700ff]/10 bg-[#262626] p-4 font-semibold text-[#e2e8ce]">
+        <div className="text-md rubik top-0 flex h-16 w-screen min-w-screen items-center justify-between bg-[#111111] p-4 font-semibold text-[#e2e8ce]">
             <div className="flex items-center">
-                <ChartArea className="mr-2 size-6 bg-[#7700ff] fill-white text-[#7700ff] ring-2 ring-[#7700ff]" />
-                {'QUERY CRM'.toUpperCase()}
+                <IconDetailed />
             </div>
             <div
                 onClick={() => router.post(route('logout'))}
-                className="rubik flex cursor-pointer items-center rounded-xs p-2 text-sm hover:bg-gray-100"
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-[#e2e8ce] transition-all duration-200 hover:bg-white/10 hover:text-white"
             >
-                {'Выход'}
+                <ChartArea className="h-4 w-4 opacity-70" />
+                Выход
             </div>
         </div>
     );

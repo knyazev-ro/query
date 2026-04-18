@@ -6,7 +6,7 @@ export default function Settings({collapsed, index}) {
         <div
             key={index}
             onClick={() => router.get(route('kanban.index'))}
-            className={`flex cursor-pointer items-center gap-3 px-4 py-4 transition hover:bg-[#ff1b1c] ${
+            className={`flex cursor-pointer items-center gap-3 rounded-full w-12 h-12 transition hover:bg-[#ff1b1c] ${
                 collapsed ? 'justify-center' : ''
             }`}
         >

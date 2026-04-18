@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectFeedController;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,7 +30,9 @@ Route::prefix('projects')->name('projects.')->group(function () {
     Route::post('/update/{id?}', [ProjectController::class, 'update'])->name('update');
     Route::post('/delete/{project?}', [ProjectController::class, 'destroy'])->name('delete');
     Route::get('/logs/paginated/{project}', [ProjectController::class,'getLogs'])->name('logs.paginated');
-
+    Route::post('/write/{entityId}/feed-comm', [ProjectFeedController::class, 'writeCommentary'])->name('feed.write.commentary');
+    Route::post('/write/{entityId}/feed-comm/{commentaryId}', [ProjectFeedController::class, 'editCommentary'])->name('feed.edit.commentary');
+    Route::get('/show/{entityId}/feed-comm', [ProjectFeedController::class, 'index'])->name('show.feed');
 });
 
 require __DIR__.'/settings.php';

@@ -1,7 +1,45 @@
 import { EllipsisVerticalIcon, StarIcon } from '@heroicons/react/16/solid';
+import { router, useForm } from '@inertiajs/react';
 import { HeartIcon } from 'lucide-react';
+import { useState } from 'react';
+import Files from './Files';
+import RichTextEditor from './RichTextEditor';
 
-export default function CommentaryMessageBlock() {
+const normalizeSlateNodes = (nodes) => {
+    return nodes.map((node) => {
+        if (node.text !== undefined) {
+            return { ...node, text: node.text || '' }; // "" вместо null
+        }
+
+        if (Array.isArray(node.children)) {
+            return {
+                ...node,
+                children: node.children.map((child) => ({
+                    ...child,
+                    text: child.text || '', // исправление здесь
+                })),
+            };
+        }
+
+        return node;
+    });
+};
+
+export default function CommentaryMessageBlock({ commentary, onEdit }) {
+    const [isEnterOn, setIsEnterOn] = useState(false);
+    const [hotKey, setHotKey] = useState<string | null>(null);
+    const { data, setData } = useForm({
+        content: normalizeSlateNodes(commentary?.content ?? []),
+        master_type: 'App\\Models\\User',
+        master_id: 1,
+        marked_notify: null,
+        files: commentary?.file_locations ?? [],
+    });
+
+    if (isEnterOn) {
+        onEdit(data);
+        setIsEnterOn(false);
+    }
     return (
         <div className="flex justify-between gap-4 border-b-1 border-[#81b64c] bg-[#acbfa4]/10 px-2 py-4">
             <div className="h-full">
@@ -14,9 +52,17 @@ export default function CommentaryMessageBlock() {
                 <div className="text-sm">{'Сегодня, 12:22'}</div>
                 <div className="mt-4 flex flex-col gap-2">
                     <div className="py-1">
-                        {
-                            'But I must explain to you how all this mistaken idea of reprobating pleasure and extolling pain arose. To do so, I will give you a complete account of the system and expound the teachings of the great explorer of the truth, the master-builder of human happiness. No one rejects, dislikes or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure rationally encounter extremely painful consequences.'
-                        }
+                        <RichTextEditor
+                            value={data.content}
+                            setValue={(e) => setData('content', e)}
+                            hotKeyOutside={hotKey}
+                            setIsEnterOn={setIsEnterOn}
+                        />
+
+                        <Files
+                            files={data.files}
+                            setFiles={(f) => setData('files', f)}
+                        />
                     </div>
 
                     <div className="flex gap-2">

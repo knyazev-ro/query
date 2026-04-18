@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('commentaries', function (Blueprint $table) {
             $table->id();
+            $table->jsonb('content');
+            $table->morphs('master');
+            $table->morphs('entity');
             $table->timestamps();
         });
     }

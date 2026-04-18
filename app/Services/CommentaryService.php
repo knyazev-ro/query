@@ -23,7 +23,7 @@ class CommentaryService
         $commentary->master_type = $commentaryDto->masterType;
         $commentary->save();
         if ($commentaryDto->files) {
-            $this->updateAttachedFiles($commentary, $commentaryDto->files->toArray());
+            $this->updateAttachedFiles($commentary, $commentaryDto->files ?? []);
         }
         if ($commentaryDto->markedNotify) {
             $this->notifyMarked($commentary, $commentaryDto->markedNotify);
@@ -35,10 +35,18 @@ class CommentaryService
         $commentary = Commentary::findOrFail($commentary_id);
         $masterIdFromDTO = $commentaryDto->masterId;
         $masterIdFromCommentary = $commentary->master_id;
-        if ($masterIdFromDTO !== $masterIdFromCommentary && !Helper::isAdmin()) {
+        if ($masterIdFromDTO !== $masterIdFromCommentary && !Helper::isAdmin() && false) { // TODO false 
             throw new \Exception("Master ID mismatch: cannot change master_id of existing commentary.");
         }
         $commentary->content = $commentaryDto->content;
+
+        if ($commentaryDto->files) {
+            $this->updateAttachedFiles($commentary, $commentaryDto->files ?? []);
+        }
+        if ($commentaryDto->markedNotify) {
+            $this->notifyMarked($commentary, $commentaryDto->markedNotify);
+        }
+
         $commentary->save();
         return $commentary;
     }
@@ -55,12 +63,12 @@ class CommentaryService
     /**
      * updateAttachedFiles
      *
-     * @param  mixed $commentaryId
-     * @param  Files[] $filePaths
+     * @param  Commentary $commentary
+     * @param  Files[] $files
      * @return void
      */
-    public function updateAttachedFiles(Commentary $commentary, array $filePaths): void {
+    public function updateAttachedFiles(Commentary $commentary, array $files): void {
         // Implementation for attaching files to a commentary
-        FileManager::updateAttachedFiles($commentary, $filePaths, $commentary->master_id, 'commentaries');
+        FileManager::updateAttachedFiles($commentary, $files, $commentary->master_id, 'commentaries');
     }
 }

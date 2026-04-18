@@ -10,13 +10,13 @@ async function fetchUsers(search, page = 1) {
     params.append('page', page);
 
     const { data } = await axios.get(
-      `${route('users.paginated')}?${params.toString()}`,
+      `${route('users.paginated')}?${params.toString()}`
     );
 
     return {
       options: data.data.map((e) => ({
         value: e.id,
-        label: (e?.last_name ?? ''),
+        label: e?.last_name ?? '',
         model: e,
       })),
       hasMore: data.next_page_url !== null,
@@ -31,9 +31,6 @@ async function fetchUsers(search, page = 1) {
 }
 
 export default function PickManagerCell({ data, handleEditDeal }) {
-  const Name = data?.author?.last_name ?? '';
-  const NameWidth = `calc(${Name.length}ch + 4ch)`;
-
   const loadResponsible = (search, loadedOptions, { page }) => {
     return fetchUsers(search, page);
   };
@@ -48,27 +45,29 @@ export default function PickManagerCell({ data, handleEditDeal }) {
   return (
     <Menu as="div" className="relative w-full">
       <Menu.Button as={Fragment}>
-        <div className="flex items-center whitespace-nowrap cursor-pointer">
-          {data.author?.last_name ?? "Добавить"}
+        <div className="cursor-pointer truncate text-sm text-white/90 transition hover:text-white">
+          {data.author?.last_name ?? (
+            <span className="text-gray-500">Добавить</span>
+          )}
         </div>
       </Menu.Button>
 
-      <Menu.Items className="absolute z-50 top-0 -m-0.5 w-44 bg-white shadow-sm">
+      <Menu.Items className="absolute left-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-white/10 bg-[#1c1c1c] shadow-lg backdrop-blur-xl">
         <Menu.Item>
           {({ close }) => (
             <AsyncPaginate
-              noOptionsMessage={() => "Нет опций"}
-              loadingMessage={() => "Загрузка"}
-              placeholder={"Добавить"}
+              noOptionsMessage={() => 'Нет опций'}
+              loadingMessage={() => 'Загрузка'}
+              placeholder="Поиск..."
+              autoFocus
               defaultOptions
-              className="text-xs w-full border-none"
               loadOptions={loadResponsible}
               additional={{ page: 1 }}
               value={
                 data?.author?.id
                   ? {
-                      label: data?.author?.last_name ?? '',
-                      value: data?.author?.id ?? null,
+                      label: data?.author?.last_name,
+                      value: data?.author?.id,
                     }
                   : null
               }
@@ -79,49 +78,52 @@ export default function PickManagerCell({ data, handleEditDeal }) {
                 }
               }}
               styles={{
-                control: (base, state) => ({
+                control: (base) => ({
                   ...base,
-                  minHeight: '20px',
-                  height: '25px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  minHeight: '36px',
                   fontSize: '0.9rem',
-                  padding: 2,
-                  backgroundColor: 'transparent',
-                  boxShadow: 'none !important',
-                  outline: 'none !important',
-                  borderColor: state.isFocused ? '#d1d5db' : base.borderColor,
-                  '&:hover': {
-                    borderColor: '#d1d5db',
-                  },
-                  width: NameWidth, // подгоняем по содержимому
+                  color: 'white',
                 }),
-                valueContainer: (base) => ({
+                menu: (base) => ({
                   ...base,
-                  padding: 0,
-                  margin: 0,
-                  alignItems: 'flex-start',
-                  height: '20px',
-                  backgroundColor: 'transparent',
+                  backgroundColor: '#1c1c1c',
+                  border: 'none',
+                  boxShadow: 'none',
+                }),
+                menuList: (base) => ({
+                  ...base,
+                  padding: 4,
+                }),
+                option: (base, state) => ({
+                  ...base,
+                  backgroundColor: state.isFocused
+                    ? 'rgba(255,255,255,0.05)'
+                    : 'transparent',
+                  color: '#e5e7eb',
+                  cursor: 'pointer',
                 }),
                 singleValue: (base) => ({
                   ...base,
-                  margin: 0,
-                  padding: 0,
+                  color: '#e5e7eb',
                 }),
-                indicatorsContainer: (base) => ({
+                input: (base) => ({
                   ...base,
-                  height: '20px',
-                  padding: 0,
-                  backgroundColor: 'transparent',
+                  color: '#fff',
+                }),
+                placeholder: (base) => ({
+                  ...base,
+                  color: '#6b7280',
                 }),
                 dropdownIndicator: (base) => ({
                   ...base,
-                  padding: '0 4px',
-                  backgroundColor: 'transparent',
+                  color: '#9ca3af',
+                  padding: 4,
                 }),
-                clearIndicator: (base) => ({
-                  ...base,
-                  padding: '0 4px',
-                  backgroundColor: 'transparent',
+                indicatorSeparator: () => ({
+                  display: 'none',
                 }),
               }}
             />

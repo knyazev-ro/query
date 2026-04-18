@@ -159,17 +159,17 @@ export default function Project({ project, stages }) {
                 </div>
 
                 {/* Горизонтальная информация */}
-                <div className="flex w-full flex-col items-center justify-between border-b-1 border-stone-300 px-16 py-2 text-sm md:flex-row">
+                <div className="flex w-full flex-col items-stretch justify-between border-b border-white/10 px-6 py-3 text-sm md:flex-row md:items-center md:gap-2">
                     {/* amount */}
-                    <div className="flex h-full items-center gap-2 px-16 py-2 hover:bg-orange-500/5">
-                        <div>
-                            <CurrencyYenIcon className="w-6 fill-yellow-100 text-yellow-500" />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="text-stone-500/80">{'Сумма'}</div>
-                            <div className="flex -translate-x-1.5 items-center">
+                    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-4 py-2 transition-all duration-200 hover:bg-white/5">
+                        <CurrencyYenIcon className="w-5 shrink-0 opacity-70" />
+
+                        <div className="flex min-w-0 flex-col">
+                            <div className="text-xs text-gray-400">Сумма</div>
+
+                            <div className="flex items-center">
                                 <input
-                                    className="h-4 appearance-none border-none px-1 text-right text-sm hover:underline focus:border-b-1"
+                                    className="border-b border-transparent bg-transparent text-sm text-white transition-all outline-none focus:border-white/30"
                                     type="number"
                                     value={data.amount}
                                     onChange={(e) => {
@@ -178,46 +178,46 @@ export default function Project({ project, stages }) {
                                             setData('amount', val);
                                         }
                                     }}
-                                    onBlur={() => {
-                                        handleEditDeal(data);
-                                    }}
+                                    onBlur={() => handleEditDeal(data)}
                                     style={{
-                                        width: `${String(data.amount || 0).length + 3}ch`,
+                                        width: `${String(data.amount || 0).length + 2}ch`,
                                     }}
                                 />
-
-                                <div className="-translate-x-2"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex h-full items-center gap-2 px-16 hover:bg-indigo-50/50">
-                        <div>
-                            <MapIcon className="w-6 fill-indigo-50 text-indigo-400" />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="text-stone-500/80">{'Воронка'}</div>
-                            <PickPipelineCell
-                                data={data}
-                                handleEditDeal={handleEditDeal}
-                            />
+                    {/* pipeline */}
+                    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-4 py-2 transition-all duration-200 hover:bg-white/5">
+                        <MapIcon className="w-5 shrink-0 opacity-70" />
+
+                        <div className="flex min-w-0 flex-col">
+                            <div className="text-xs text-gray-400">Воронка</div>
+                            <div className="min-w-0">
+                                <PickPipelineCell
+                                    data={data}
+                                    handleEditDeal={handleEditDeal}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex h-full items-center gap-2 px-16 hover:bg-blue-50">
-                        <div>
-                            <UserCircleIcon className="w-6 fill-blue-50 text-blue-400" />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="text-stone-500/80">{'Автор'}</div>
-                            <PickManagerCell
-                                data={data}
-                                handleEditDeal={handleEditDeal}
-                            />
+                    {/* author */}
+                    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-4 py-2 transition-all duration-200 hover:bg-white/5">
+                        <UserCircleIcon className="w-5 shrink-0 opacity-70" />
+
+                        <div className="flex min-w-0 flex-col">
+                            <div className="text-xs text-gray-400">Автор</div>
+
+                            <div className="min-w-0">
+                                <PickManagerCell
+                                    data={data}
+                                    handleEditDeal={handleEditDeal}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
-
                 <div className="flex h-fit gap-2 overflow-y-auto">
                     {/* Левая часть — красивая версия */}
                     <div className="flex h-fit max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#fcfff3] p-4 backdrop-blur-md">
@@ -247,7 +247,7 @@ export default function Project({ project, stages }) {
 
                     {/* Правая часть */}
                     <div className="flex w-full max-w-2/3 flex-col">
-                        <Feed />
+                        <Feed entityId={data.id} />
                     </div>
                 </div>
             </div>

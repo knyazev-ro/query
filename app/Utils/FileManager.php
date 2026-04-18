@@ -34,7 +34,7 @@ class FileManager
     /**
      * updateAttachedFiles
      *
-     * @param  mixed  $commentaryId
+     * @param  Model  $model
      * @param  Files[]  $files
      */
     public static function updateAttachedFiles(
@@ -58,7 +58,7 @@ class FileManager
                 }
                 if ($fileDto->file instanceof UploadedFile) {
                     $fileLocationInstance = FileManager::store(
-                        model: $model->id,
+                        model: $model,
                         file: $fileDto->file,
                         directory: $dir,
                         author_id: $author_id

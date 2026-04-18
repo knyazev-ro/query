@@ -7,6 +7,7 @@ use App\DTO\Files;
 use App\Models\Commentary;
 use App\Models\Project;
 use App\Services\CommentaryService;
+use GuzzleHttp\Psr7\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 
@@ -14,7 +15,7 @@ class CommentaryController extends Controller
 {
     protected static $entityModel = Project::class;
 
-    protected static $FileSection = 'commentaries';
+    protected static $fileSection = 'commentaries';
 
     public function __construct(protected CommentaryService $commentaryService) {}
 
@@ -23,6 +24,7 @@ class CommentaryController extends Controller
         $perPage = $request->query('per_page', 10);
 
         return Commentary::query()
+            ->with(['fileLocations'])
             ->where('entity_id', $entityId)
             ->where('entity_type', static::$entityModel)
             ->paginate($perPage);
@@ -36,8 +38,7 @@ class CommentaryController extends Controller
             'master_id' => 'nullable|integer',
             'files' => 'nullable|array',
             'files.*.id' => 'nullable|integer',
-            'files.*.file' => 'nullable|file',
-            'files.*.toDelete' => 'required|boolean',
+            'files.*.toDelete' => 'nullable|boolean',
         ]);
 
         try {
@@ -50,7 +51,7 @@ class CommentaryController extends Controller
                 files: $validated['files'] ? collect($validated['files'])->map(function ($item) {
                     $fileDto = new Files(
                         id: $item['id'] ?? null,
-                        file: $item['file'] ?? null,
+                        file: ($item ?? null) instanceof UploadedFile ? $item : null,
                         path: $item['path'] ?? null,
                         toDelete: $item['toDelete'] ?? false,
                     );

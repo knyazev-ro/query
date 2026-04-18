@@ -1,29 +1,13 @@
-import { useState } from 'react';
-import CommentaryInputBlock from './CommentaryBlock';
+import { JSX, useState } from 'react';
 
-export default function InputBlock() {
-    const [tabs, setTabs] = useState([
-        {
-            name: 'Комментарий',
-            current: true,
-            component: <CommentaryInputBlock />,
-        },
-        {
-            name: 'Создать задачу',
-            current: false,
-            component: <div></div>,
-        },
-        {
-            name: 'Ивент',
-            current: false,
-            component: <div></div>,
-        },
-        {
-            name: 'Статистика',
-            current: false,
-            component: <div></div>,
-        },
-    ]);
+interface Tab {
+    name: string;
+    current: boolean;
+    component: JSX.Element;
+}
+
+export default function InputBlock({ pTabs }: { pTabs: Tab[] }) {
+    const [tabs, setTabs] = useState(pTabs);
 
     const handlePickTab = (idx: number) => {
         setTabs((tabs) =>
@@ -44,8 +28,8 @@ export default function InputBlock() {
                     </div>
                 ))}
             </div>
-            <div className='transition-all duration-300'>
-            {tabs.find((tab) => tab.current)?.component ?? null}
+            <div className="transition-all duration-300">
+                {tabs.find((tab) => tab.current)?.component ?? null}
             </div>
         </div>
     );

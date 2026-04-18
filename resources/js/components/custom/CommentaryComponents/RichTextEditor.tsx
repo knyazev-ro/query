@@ -92,6 +92,26 @@ const isImageUrl = (url: string): boolean => {
     return imageExtensions.includes(ext!);
 };
 
+const compressImage = (base64: string, scale = 0.5): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new window.Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+
+            const ctx = canvas.getContext('2d');
+            ctx!.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // качество по желанию (для jpeg), для png игнорируется
+            const compressed = canvas.toDataURL('image/png', 0.8);
+
+            resolve(compressed);
+        };
+        img.src = base64;
+    });
+};
+
 const withImages = (editor: CustomEditor) => {
     const { insertData, isVoid } = editor;
 
@@ -109,9 +129,10 @@ const withImages = (editor: CustomEditor) => {
                 const [mime] = file.type.split('/');
 
                 if (mime === 'image') {
-                    reader.addEventListener('load', () => {
-                        const url = reader.result;
-                        insertImage(editor, url as string);
+                    reader.addEventListener('load', async () => {
+                        const base64 = reader.result as string;
+                        const compressed = await compressImage(base64, 0.5);
+                        insertImage(editor, compressed);
                     });
 
                     reader.readAsDataURL(file);
@@ -165,7 +186,7 @@ const VideoElement = ({
                     <iframe
                         src={`${safeUrl}?title=0&byline=0&portrait=0`}
                         frameBorder="0"
-                        className="z-10 h-full w-full"
+                        className="z-10 h-screen w-full"
                     />
                 </div>
             </div>
@@ -281,13 +302,18 @@ const handleToolbarClick = (editor, hotkey: string) => {
         if (url !== 'about:blank') {
             insertVideo(editor, url);
         }
-    } else if(HOTKEYS[hotkey] === 'bold') {
+    } else if (HOTKEYS[hotkey] === 'bold') {
         const mark = HOTKEYS[hotkey];
         toggleMark(editor, mark);
     }
 };
 
-export default function RichTextEditor({ value, setValue, hotKeyOutside }) {
+export default function RichTextEditor({
+    value,
+    setValue,
+    hotKeyOutside,
+    setIsEnterOn,
+}) {
     const renderElement = useCallback(
         (props: RenderElementProps) => <Element {...props} />,
         [],
@@ -315,8 +341,18 @@ export default function RichTextEditor({ value, setValue, hotKeyOutside }) {
                 placeholder="Введите комментарий..."
                 spellCheck
                 autoFocus
-                className="focus:ring-none w-full resize-none font-medium break-words break-all text-[#262626]/80 transition-all outline-none focus:border-none focus:outline-none"
+                className="focus:ring-none w-full resize-none font-medium break-words break-all transition-all outline-none focus:border-none focus:outline-none"
                 onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                    if (isHotkey('shift+enter', event as any)) {
+                        setIsEnterOn(true);
+                        Transforms.delete(editor, {
+                            at: {
+                                anchor: Editor.start(editor, []),
+                                focus: Editor.end(editor, []),
+                            },
+                        });
+                    }
+
                     for (const hotkey in HOTKEYS) {
                         if (isHotkey(hotkey, event as any)) {
                             event.preventDefault();
