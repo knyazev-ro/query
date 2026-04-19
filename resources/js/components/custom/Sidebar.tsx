@@ -87,7 +87,7 @@ export default function Sidebar() {
                 onMouseLeave={() => setHovered(false)}
                 className={`absolute bottom-0 flex h-24 w-full items-center justify-center transition-all duration-300 ${hovered ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-20 opacity-0'} `}
             >
-                <div className="flex h-18 w-1/2 justify-between items-center rounded-3xl bg-black/90 px-4 py-1">
+                <div className="flex h-18 w-128 justify-between items-center rounded-3xl bg-black/90 px-4 py-1">
                     {menuItems.map((item, index) => (
                         <item.component
                             key={index}
@@ -101,7 +101,7 @@ export default function Sidebar() {
             {/* Кнопка */}
             <div
                 onMouseEnter={() => setHovered(true)}
-                className={`absolute bottom-0 flex h-18 w-full items-center justify-center bg-gradient-to-t from-black/50 transition-all duration-300 ${hovered ? 'pointer-events-none translate-y-20 opacity-0' : 'translate-y-0 opacity-100'} `}
+                className={`absolute bottom-0 flex h-18 w-full items-center justify-center bg-gradient-to-t from-black/20 transition-all duration-300 ${hovered ? 'pointer-events-none translate-y-20 opacity-0' : 'translate-y-0 opacity-100'} `}
             >
                 <ChevronUpIcon className="w-8 cursor-pointer rounded-full" />
             </div>

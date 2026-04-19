@@ -27,7 +27,7 @@ export default function Filters() {
             <div className="flex gap-2">
                 {filters.map((filter) => {
                     return (
-                        <div className="rounded-xs bg-[#81b64c] px-3 py-2 text-white">
+                        <div className="rounded-full bg-[#81b64c] font-semibold px-6 py-2 text-white">
                             {filter}
                         </div>
                     );

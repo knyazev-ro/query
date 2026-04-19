@@ -4,75 +4,78 @@ import Contacts from './Contacts';
 export default function ClientCompanyCard({ client }) {
     const entity = client.entity;
     const contacts = client?.contacts ?? [];
-    return (
-        <div className="flex w-full flex-col gap-4 text-[#262626]"> 
-            <div className="flex flex-col rounded-xs border border-[#acbfa4] p-1">
-                <div className="font-semibold">Компания</div>
-                <div className="flex w-full flex-col p-2">
-                    <div className="flex w-full gap-2">
-                        <div className="flex h-7 min-h-7 w-7 min-w-7 items-center justify-center rounded-sm bg-[#ff1b1c]">
-                            <DocumentChartBarIcon className="w-5 text-[#fcfff3]" />
-                        </div>
-                        <div className="flex w-full flex-col">
-                            <span className="font-semibold">{`${entity.name}, ${entity.legal_form}`}</span>
-                            <span className="flex justify-between bg-[#acbfa4]/20 font-medium">
-                                {`Директор: `}
-                                <span className="font-normal">
-                                    {entity.director_name}
-                                </span>
-                            </span>
-                            <span className="flex justify-between font-medium">
-                                {`Сфера: `}
-                                <span className="font-normal">
-                                    {entity.industry}
-                                </span>
-                            </span>
-                            <span className="flex w-full justify-between bg-[#acbfa4]/20 font-medium">
-                                {`Сайт: `}
-                                <a
-                                    href={entity.website}
-                                    target="_blank"
-                                    className="w-64 truncate font-normal text-[#81b64c]"
-                                >
-                                    {entity.website}
-                                </a>
-                            </span>
-                            <span className="flex justify-between font-medium">
-                                {`ИНН: `}
-                                <span className="font-normal">
-                                    {entity.inn}
-                                </span>
-                            </span>
 
-                            <span className="flex justify-between bg-[#acbfa4]/20 font-medium">
-                                {`КПП: `}
-                                <span className="font-normal">
-                                    {entity.kpp}
-                                </span>
-                            </span>
-                            <span className="flex justify-between font-medium">
-                                {`ОГРН: `}
-                                <span className="font-normal">
-                                    {entity.ogrn}
-                                </span>
-                            </span>
-                            <span className="flex justify-between bg-[#acbfa4]/20 font-medium">
-                                {`Источник: `}
-                                <span className="font-normal">
-                                    {entity.source}
-                                </span>
-                            </span>
-                            <span className="flex justify-between font-medium">
-                                {`Примечание: `}
-                                <span className="font-normal">
-                                    {entity.notes}
-                                </span>
-                            </span>
+    const Row = ({ label, value, highlight = false }) => (
+        <div className="flex items-start justify-between gap-3 py-1">
+            <span className="text-xs text-gray-500">{label}</span>
+            <span
+                className={`text-sm text-right ${
+                    highlight ? 'text-white' : 'text-gray-300'
+                }`}
+            >
+                {value || '—'}
+            </span>
+        </div>
+    );
+
+    return (
+        <div className="flex w-full flex-col gap-4 text-white">
+
+            {/* CARD */}
+            <div className="p-4">
+
+                {/* HEADER */}
+                <div className="flex items-center gap-3 border-b border-white/10 pb-3 mb-3">
+
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5">
+                        <DocumentChartBarIcon className="w-5 text-white/70" />
+                    </div>
+
+                    <div className="flex flex-col">
+                        <div className="text-sm font-semibold text-white">
+                            {entity.name}, {entity.legal_form}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            Компания
                         </div>
                     </div>
                 </div>
+
+                {/* BODY */}
+                <div className="flex flex-col gap-1">
+
+                    <Row label="Директор" value={entity.director_name} />
+                    <Row label="Сфера" value={entity.industry} />
+
+                    <Row
+                        label="Сайт"
+                        value={
+                            entity.website ? (
+                                <a
+                                    href={entity.website}
+                                    target="_blank"
+                                    className="text-sm text-blue-400 hover:text-blue-300"
+                                >
+                                    {entity.website}
+                                </a>
+                            ) : null
+                        }
+                    />
+
+                    <Row label="ИНН" value={entity.inn} />
+                    <Row label="КПП" value={entity.kpp} />
+                    <Row label="ОГРН" value={entity.ogrn} />
+
+                    <Row label="Источник" value={entity.source} />
+                    <Row label="Примечание" value={entity.notes} />
+                </div>
             </div>
-            <Contacts contacts={contacts} />
+
+            {/* CONTACTS */}
+            <div className="rounded-2xl bg-[#181818] p-4">
+                <Contacts contacts={contacts} />
+            </div>
+
         </div>
     );
 }

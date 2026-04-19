@@ -37,7 +37,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Header />
             {showErr && <Errors errors={localErrors} />}
             <div className="flex flex-col h-full w-screen overflow-hidden p-2 bg-black">
-                <div className="p-1 h-full w-full rounded-t-2xl overflow-auto bg-[#262626]">{children}</div>
+                <div className="h-full w-full rounded-t-2xl overflow-auto bg-[#262626]">{children}</div>
                 <Sidebar />
             </div>
         </div>

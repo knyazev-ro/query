@@ -80,7 +80,7 @@ export default function Project({ project, stages }) {
 
     return (
         <Layout>
-            <div className="flex h-full flex-col overflow-y-hidden rounded-lg bg-[#262626] px-5 py-6 text-[#e2e8ce]">
+            <div className="flex h-full flex-col bg-[#161616] px-5 py-6 text-[#e2e8ce]">
                 <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-2xl font-bold md:flex-nowrap">
                     <div className="flex gap-2">
                         <div className="flex items-center justify-center text-xs text-gray-400">
@@ -220,33 +220,43 @@ export default function Project({ project, stages }) {
                 </div>
                 <div className="flex h-fit gap-2 overflow-y-auto">
                     {/* Левая часть — красивая версия */}
-                    <div className="flex h-fit max-w-md min-w-1/3 flex-col gap-4 border-r-1 border-b-1 border-l-1 border-gray-200 bg-[#fcfff3] p-4 backdrop-blur-md">
+                    {/* Левая часть */}
+                    <div className="flex h-fit w-full max-w-md flex-col gap-5 border-r-1 border-white/10 p-5">
                         {/* Заголовок */}
-                        <h2 className="mb-2 border-b pb-2 text-lg font-semibold text-gray-800">
-                            Основные данные
-                        </h2>
+                        <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
+                            <h2 className="text-base font-semibold text-white">
+                                Основные данные
+                            </h2>
+                            <span className="text-xs text-gray-500">
+                                Информация о проекте
+                            </span>
+                        </div>
 
                         {/* Описание */}
-                        <div>
-                            <label className="mb-1 block text-sm text-gray-600">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs text-gray-400">
                                 Описание проекта
                             </label>
+
                             <input
-                                className="w-full rounded-xs border border-gray-300 p-2 text-sm text-[#262626] transition outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                 value={data.description}
                                 type="text"
                                 placeholder="Введите описание..."
-                                onChange={(e) => {
-                                    setData('description', e.target.value);
-                                }}
+                                onChange={(e) =>
+                                    setData('description', e.target.value)
+                                }
+                                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white transition outline-none focus:border-white/20 focus:bg-white/10 focus:ring-1 focus:ring-white/10"
                             />
                         </div>
 
-                        <ClientCompanyCard client={data.client} />
+                        {/* CLIENT BLOCK */}
+                        <div className="pt-2">
+                            <ClientCompanyCard client={data.client} />
+                        </div>
                     </div>
 
                     {/* Правая часть */}
-                    <div className="flex w-full max-w-2/3 flex-col">
+                    <div className="flex w-full flex-col">
                         <Feed entityId={data.id} />
                     </div>
                 </div>

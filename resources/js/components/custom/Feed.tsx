@@ -69,7 +69,7 @@ export default function Feed({ entityId }: { entityId: number }) {
     }, [page]);
 
     return (
-        <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#161616] shadow-xl">
+        <div className="flex h-full flex-col rounded-2xl">
             {/* HEADER */}
             <div className="flex flex-col gap-3 border-b border-white/10 p-4">
                 {/* Tabs */}
@@ -96,12 +96,12 @@ export default function Feed({ entityId }: { entityId: number }) {
             </div>
 
             {/* FILTERS */}
-            <div className="border-b border-white/10 px-4 py-2">
+            <div className="border-b border-white/10 px-4 py-3">
                 <Filters />
             </div>
 
             {/* FEED */}
-            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+            <div className="flex flex-1 flex-col gap-3 p-4">
                 {feedElements.map((feed) => {
                     const onEdit = async (data) => {
                         router.post(
