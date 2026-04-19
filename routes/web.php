@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProjectController;
@@ -26,6 +27,10 @@ Route::prefix('kanban')->name('kanban.')->group(function () {
 
 Route::prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [NotificationController::class, 'index'])->name('index');
+});
+
+Route::prefix('messager')->name('messager.')->group(function () {
+    Route::get('/', [MessagerController::class, 'index'])->name('index');
 });
 
 Route::prefix('projects')->name('projects.')->group(function () {
