@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DatasetController;
+use App\Http\Controllers\GraphController;
 use App\Http\Controllers\ImgModelController;
 use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
@@ -41,6 +42,10 @@ Route::prefix('datasets')->name('datasets.')->group(function () {
 
 Route::prefix('img-models')->name('img-models.')->group(function () {
     Route::get('/', [ImgModelController::class, 'index'])->name('index');
+});
+
+Route::prefix('graph')->name('graph.')->group(function () {
+    Route::get('/', [GraphController::class, 'index'])->name('index');
 });
 
 Route::prefix('projects')->name('projects.')->group(function () {
