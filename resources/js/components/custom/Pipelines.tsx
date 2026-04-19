@@ -1,46 +1,57 @@
 import { PlusIcon } from "@heroicons/react/16/solid";
+import { useState } from "react";
 
 export default function Pipelines({ pipelines }) {
+    const [activeId, setActiveId] = useState(pipelines?.[0]?.id ?? null);
 
-    const handleEditPipeline = () => {
-        //
-    }
+    const handleEditPipeline = (id) => {
+        setActiveId(id);
+        // логика перехода
+    };
 
     const handleAddPipeline = () => {
-        // 
-    }
+        // логика добавления
+    };
 
     return (
-        <div className="px-2 flex flex-col gap-1">
-            <div className="text-gray-300 text-md font-semibold px-4">
-                {"Потоки"}
+        <div className="flex flex-col gap-2">
+
+            {/* HEADER */}
+            <div className="flex items-center justify-between px-2">
+                <div className="text-sm font-semibold text-gray-400">
+                    Потоки
+                </div>
+
+                <button
+                    onClick={handleAddPipeline}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white/10 hover:text-white"
+                >
+                    <PlusIcon className="w-4" />
+                </button>
             </div>
-        <div className="flex max-h-11 overflow-y-hidden overflow-hidden whitespace-nowrap">
-            <div
-                className="bg-[#262626] px-4 kanban-column -mr-8"
-                style={{
-                    zIndex: 100
-                }}>
-               <div
-               onClick={() => handleAddPipeline()} 
-               className="kanban-column cursor-pointer text-lg flex items-center justify-center text-center bg-[#ff1b1c] px-9 py-3 font-semibold">
-                    <PlusIcon className="w-5"/>
-                </div>
-                </div>
-            {pipelines?.map((e, idx) => (
-                <div
-                className="bg-[#262626] px-4 kanban-column -mr-8"
-                style={{
-                    zIndex: (pipelines.length - idx)
-                }}>
-               <div
-               onClick={() => handleEditPipeline()} 
-               className="kanban-column cursor-pointer text-sm bg-[#ff1b1c] px-9 py-3 font-semibold">
-                    {e.name.toUpperCase()}
-                </div>
-                </div>
-            ))}
-        </div>
+
+            {/* LIST */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+
+                {pipelines?.map((e) => {
+                    const isActive = e.id === activeId;
+
+                    return (
+                        <button
+                            key={e.id}
+                            onClick={() => handleEditPipeline(e.id)}
+                            className={`
+                                whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-all
+                                ${isActive
+                                    ? 'bg-white/10 text-white shadow-sm'
+                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'}
+                            `}
+                        >
+                            {e.name}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 }

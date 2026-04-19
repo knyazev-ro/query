@@ -10,45 +10,46 @@ export default function Kanban({ stages: initialStages, pipelines }) {
     const [activeProject, setActiveProject] = useState(null);
     const [stages, setStages] = useState(initialStages);
     const [overId, setOverId] = useState(null);
+
     const handleDragEnd = (event) => {
         const { active, over } = event;
         setActiveProject(null);
         setOverId(null);
 
-        if (!over) {
-            return;
-        }
+        if (!over) return;
 
         const fromProjectId = active.id;
         const toStageId = over.id;
 
-        // Если перетащили в ту же колонку — ничего не делаем
         const fromStageIndex = stages.findIndex((s) =>
             s.projects?.some((p) => p.id === fromProjectId),
         );
+
         const toStageIndex = stages.findIndex(
             (s) => String(s.id) === String(toStageId),
         );
+
         if (fromStageIndex === -1 || toStageIndex === -1) return;
         if (fromStageIndex === toStageIndex) return;
 
         setStages((prev) => {
-            // глубокая копия минимально необходимая
             const copy = prev.map((s) => ({
                 ...s,
                 projects: s.projects ? [...s.projects] : [],
             }));
-            // найти и удалить проект из старой стадии
+
             const projIndex = copy[fromStageIndex].projects.findIndex(
                 (p) => p.id === fromProjectId,
             );
+
             if (projIndex === -1) return prev;
+
             const [proj] = copy[fromStageIndex].projects.splice(projIndex, 1);
             copy[toStageIndex].projects.push(proj);
+
             return copy;
         });
 
-        // отправляем запрос на сервер асинхронно
         router.post(route('kanban.drop', [fromProjectId, toStageId]), {
             onError: (errors) => {
                 console.error('Drop failed', errors);
@@ -57,48 +58,61 @@ export default function Kanban({ stages: initialStages, pipelines }) {
     };
 
     const handleDragStart = (event) => {
-        const { active } = event;
-        setActiveProject(active.data.current);
-        console.log(active.data.current);
+        setActiveProject(event.active.data.current);
     };
 
     const handleDragOver = (event) => {
-        const { over } = event;
-        setOverId(over ? over.id : null);
+        setOverId(event.over ? event.over.id : null);
     };
-
-    console.log(activeProject);
 
     return (
         <Layout>
-            <div className="flex flex-col gap-2 py-2 bg-[#161616]">
-            <div className=''>
-            <Pipelines pipelines={pipelines}/>
-            </div>
-                <DndContext
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={handleDragOver}
-                >
-                    <div className="flex h-full px-4 justify-start overflow-x-auto">
-                        {stages?.map((stage, idx) => (
-                            <Stage
-                                key={stage.id}
-                                stage={stage}
-                                isOver={stage.id === overId}
-                                idx={idx}
-                                key={idx}
-                            />
-                        ))}
-                    </div>
-                    <DragOverlay>
-                        {activeProject ? (
-                            <div className="z-50">
-                                <ProjectCard project={activeProject} />
-                            </div>
-                        ) : null}
-                    </DragOverlay>
-                </DndContext>
+            <div className="flex h-full flex-col gap-4 bg-[#121212] p-4">
+
+                {/* PIPELINES BAR */}
+                <div className=" border border-white/10 bg-[#181818] p-3 shadow-md">
+                    <Pipelines pipelines={pipelines} />
+                </div>
+
+                {/* KANBAN */}
+                <div className="flex flex-1 overflow-hidden border border-white/10 bg-[#161616] shadow-inner">
+
+                    <DndContext
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                    >
+                        {/* SCROLL AREA */}
+                        <div className="flex w-full gap-4 overflow-x-auto p-4">
+
+                            {stages?.map((stage, idx) => (
+                                <div
+                                    key={stage.id}
+                                    className={`
+                                        transition-all duration-200
+                                        ${stage.id === overId ? 'scale-[1.02]' : ''}
+                                    `}
+                                >
+                                    <Stage
+                                        stage={stage}
+                                        isOver={stage.id === overId}
+                                        idx={idx}
+                                    />
+                                </div>
+                            ))}
+
+                        </div>
+
+                        {/* DRAG OVERLAY */}
+                        <DragOverlay>
+                            {activeProject ? (
+                                <div className="rotate-2 scale-105 opacity-90 shadow-2xl">
+                                    <ProjectCard project={activeProject} />
+                                </div>
+                            ) : null}
+                        </DragOverlay>
+                    </DndContext>
+                </div>
             </div>
         </Layout>
     );

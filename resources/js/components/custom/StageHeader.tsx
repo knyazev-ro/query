@@ -1,24 +1,52 @@
 import {
     ChevronLeftIcon,
     ChevronRightIcon,
-    PlusCircleIcon,
+    PlusIcon,
 } from '@heroicons/react/16/solid';
 
 export default function StageHeader({ stage, idx }) {
     return (
-        <div className="relative flex w-full items-center">
-           {idx === 0 && <div className="absolute left-0 -translate-x-4 -translate-y-1.5 flex cursor-pointer items-center justify-center text-[#262626] rounded-full hover:bg-[#fcfff3] bg-[#667c5d] opacity-100 z-10 transition-all hover:opacity-100">
-                <PlusCircleIcon className="w-6" />
-            </div>}
-            <h3 className="text-md kanban-column mb-4 flex w-full justify-between bg-[#81b64c] p-3 font-semibold text-white">
-                <div>{stage.name.toUpperCase()}</div>
-                <div className="flex items-center gap-4 px-2">
-                    <ChevronLeftIcon className="w-5 min-w-5 cursor-pointer rounded-full hover:bg-[#acbfa4] transition-colors" />
-                    <ChevronRightIcon className="w-5 min-w-5 cursor-pointer rounded-full hover:bg-[#acbfa4] transition-colors" />
-                </div>
-            </h3>
-            <div className="absolute right-0 flex translate-x-7 -translate-y-1.5 cursor-pointer items-center justify-center text-[#fcfff3] opacity-5 transition-opacity hover:opacity-100">
-                <PlusCircleIcon className="w-6" />
+        <div className="relative flex items-center justify-between rounded-xl border border-white/10 bg-[#1c1c1c] px-3 py-2 mb-3">
+
+            {/* LEFT */}
+            <div className="flex items-center gap-2">
+
+                {/* ADD BUTTON (только у первой колонки) */}
+                {idx === 0 && (
+                    <button className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white">
+                        <PlusIcon className="w-4" />
+                    </button>
+                )}
+
+                {/* TITLE */}
+                <h3 className="text-sm font-semibold text-white tracking-wide">
+                    {stage.name}
+                </h3>
+
+                {/* COUNT (если есть проекты — рекомендую добавить) */}
+                {stage.projects?.length > 0 && (
+                    <span className="rounded-md bg-white/5 px-2 py-0.5 text-xs text-gray-400">
+                        {stage.projects.length}
+                    </span>
+                )}
+            </div>
+
+            {/* RIGHT ACTIONS */}
+            <div className="flex items-center gap-1">
+
+                <button className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white/10 hover:text-white">
+                    <ChevronLeftIcon className="w-4" />
+                </button>
+
+                <button className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white/10 hover:text-white">
+                    <ChevronRightIcon className="w-4" />
+                </button>
+
+                {/* ADD */}
+                <button className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white/10 hover:text-white">
+                    <PlusIcon className="w-4" />
+                </button>
+
             </div>
         </div>
     );

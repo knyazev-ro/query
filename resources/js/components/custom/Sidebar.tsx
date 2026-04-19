@@ -4,6 +4,7 @@ import {
     UserCircleIcon,
 } from '@heroicons/react/16/solid';
 import { useState } from 'react';
+
 import Clients from './SidebarComponents/Clients';
 import Contacts from './SidebarComponents/Contacts';
 import Feed from './SidebarComponents/Feed';
@@ -16,95 +17,94 @@ import User from './SidebarComponents/User';
 import Users from './SidebarComponents/Users';
 
 export default function Sidebar() {
-    const [collapsed, setCollapsed] = useState(
-        localStorage.getItem('bar') === '1' ? true : false,
-    );
+    const [hovered, setHovered] = useState(false);
 
     const menuItems = [
-        { name: 'Канбан', component: Kanban },
-        { name: 'Уведомления', component: Notifications },
-        { name: 'Сообщения', component: Messages },
-        { name: 'Лента', component: Feed },
-        { name: 'Клиенты', component: Clients },
-        { name: 'Контакты', component: Contacts },
-        { name: 'Пользователи', component: Users },
-        { name: 'Медиа', component: Media },
+        { component: Kanban },
+        { component: Notifications },
+        { component: Messages },
+        { component: Feed },
+        { component: Clients },
+        { component: Contacts },
+        { component: Users },
+        { component: Media },
     ];
 
     const bottomItems = [
-        { name: 'Канбан', component: User, icon: UserCircleIcon },
-        { name: 'Настройки', component: Settings, icon: CogIcon },
+        { component: User, icon: UserCircleIcon },
+        { component: Settings, icon: CogIcon },
     ];
 
-    // return (
-    //     <div
-    //         className={`flex w-screen flex-col border-r-2 border-[#1e1d1d] bg-[#262626] text-[#fcfff3] shadow-lg transition-all duration-300 ${
-    //             collapsed ? 'w-28' : 'w-96'
-    //         }`}
-    //     >
-    //         <div className="flex w-full py-2 items-center justify-center">
-    //             {collapsed ? <Icon /> : <IconDetailed />}
-    //         </div>
-    //         {/* Кнопка сворачивания */}
-    //         <button
-    //             onClick={() => {
-    //                 setCollapsed((c) => {
-    //                     localStorage.setItem('bar', !c ? '1' : '0');
-    //                     return !c;
-    //                 });
-    //             }}
-    //             className="mb-6 flex items-center justify-center transition hover:text-stone-800"
-    //         >
-    //             {collapsed ? (
-    //                 <ChevronRight className="h-5 w-5" />
-    //             ) : (
-    //                 <ChevronLeft className="h-5 w-5" />
-    //             )}
-    //         </button>
-
-    //         {/* Навигация */}
-    //         <div className="flex justify-between">
-    //             <nav className="flex space-y-1">
-    //                 {menuItems.map((item, index) => (
-    //                     <item.component collapsed={collapsed} index={index} />
-    //                 ))}
-    //             </nav>
-    //             <nav className="bg-[#1e1d1d]">
-    //                 {bottomItems.map((item, index) => (
-    //                     <item.component collapsed={collapsed} index={index} />
-    //                 ))}
-    //             </nav>
-    //         </div>
-    //     </div>
-    // );
-
-    const [hovered, setHovered] = useState(false);
-
     return (
-        <div className="relative flex w-full items-center justify-center border">
-            {/* Панель */}
+        <div className="pointer-events-none fixed bottom-4 left-0 right-0 z-50 flex justify-center">
+
+            {/* DOCK */}
             <div
+                onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                className={`absolute bottom-0 flex h-24 w-full items-center justify-center transition-all duration-300 ${hovered ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-20 opacity-0'} `}
+                className={`
+                    pointer-events-auto relative
+                    transition-all duration-300
+                    ${hovered ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-70'}
+                `}
             >
-                <div className="flex h-18 w-128 justify-between items-center rounded-3xl bg-black/90 px-4 py-1">
-                    {menuItems.map((item, index) => (
-                        <item.component
+                <div
+                    className="
+                        flex items-center gap-2
+                        rounded-2xl border border-white/10
+                        bg-[#1a1a1a]/80 px-3 py-2
+                        shadow-2xl backdrop-blur-xl
+                    "
+                >
+                    {menuItems.map((Item, index) => (
+                        <div
                             key={index}
-                            collapsed={true}
-                            index={index}
-                        />
+                            className="
+                                flex items-center justify-center
+                                rounded-xl p-2
+                                transition-all duration-200
+                                hover:bg-white/10 hover:scale-105
+                            "
+                        >
+                            <Item.component collapsed />
+                        </div>
+                    ))}
+
+                    {/* divider */}
+                    <div className="mx-2 h-6 w-px bg-white/10" />
+
+                    {bottomItems.map((Item, index) => (
+                        <div
+                            key={index}
+                            className="
+                                flex items-center justify-center
+                                rounded-xl p-2
+                                text-gray-400
+                                transition-all duration-200
+                                hover:bg-white/10 hover:text-white hover:scale-105
+                            "
+                        >
+                            <Item.component collapsed />
+                        </div>
                     ))}
                 </div>
             </div>
 
-            {/* Кнопка */}
-            <div
-                onMouseEnter={() => setHovered(true)}
-                className={`absolute bottom-0 flex h-18 w-full items-center justify-center bg-gradient-to-t from-black/20 transition-all duration-300 ${hovered ? 'pointer-events-none translate-y-20 opacity-0' : 'translate-y-0 opacity-100'} `}
-            >
-                <ChevronUpIcon className="w-8 cursor-pointer rounded-full" />
-            </div>
+            {/* TOGGLE BUTTON */}
+            {!hovered && (
+                <div
+                    onMouseEnter={() => setHovered(true)}
+                    className="
+                        pointer-events-auto absolute bottom-0
+                        flex items-center justify-center
+                        transition-all duration-300
+                    "
+                >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a1a1a]/80 shadow-lg backdrop-blur-xl border border-white/10 hover:bg-white/10 transition">
+                        <ChevronUpIcon className="w-5 text-gray-400" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
