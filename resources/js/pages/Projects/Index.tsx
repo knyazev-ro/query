@@ -1,9 +1,9 @@
-import FTable from '@/components/FTable';
+import FTable from '@/components/custom/FTable';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
-import Layout from '@/components/Layout';
-import CellAction from '@/components/table/CellAction';
-import ColumnHeader from '@/components/table/ColumnHeader';
+import Layout from '@/components/custom/Layout';
+// import CellAction
+// import ColumnHeader
 import { router } from '@inertiajs/react';
 
 const Index = () => {

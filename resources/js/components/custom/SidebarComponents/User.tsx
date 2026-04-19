@@ -4,7 +4,7 @@ import { router } from '@inertiajs/react';
 import { LogOutIcon } from 'lucide-react';
 import { route } from 'ziggy-js';
 
-export default function User({ collapsed, index }) {
+export default function User({ collapsed }) {
     const items = [
         {
             name: 'Мой профиль',
@@ -21,38 +21,60 @@ export default function User({ collapsed, index }) {
     ];
 
     return (
-        <Menu as={'div'} className={'relative'}>
+        <Menu as="div" className="relative">
+
+            {/* BUTTON */}
             <MenuButton
-                as="div"
-                className={`flex cursor-pointer items-center bg-[#acbfa4] gap-3 px-4 py-4 transition hover:bg-[#ff1b1c] ${
-                    collapsed ? 'justify-center' : ''
-                }`}
+                className={`
+                    flex items-center gap-2
+                    rounded-xl px-3 py-2
+                    text-gray-300 transition
+                    hover:bg-white/10 hover:text-white
+                    ${collapsed ? 'justify-center' : ''}
+                `}
             >
-                <UserCircleIcon className="h-5 w-5" />
+                <UserCircleIcon className="h-5 w-5 opacity-80" />
+
                 {!collapsed && (
                     <span className="text-sm font-medium">
-                        {'Профиль'}
+                        Профиль
                     </span>
                 )}
             </MenuButton>
-            <MenuItems className={'bg-[#1e1d1d] flex flex-col justify-center items-center'}>
+
+            {/* DROPDOWN */}
+            <MenuItems
+                className="
+                    absolute bottom-full left-0 mb-2 w-48
+                    rounded-xl border border-white/10
+                    bg-[#1c1c1c] p-1 shadow-2xl backdrop-blur-xl
+                    focus:outline-none
+                "
+            >
                 {items.map((e, idx) => (
-                    <MenuItem
-                        key={idx}
-                        as={'div'}
-                        onClick={() => {
-                            if (e.method === 'POST') {
-                                router.post(e.href);
-                            } else {
-                                router.get(e.href);
-                            }
-                        }}
-                        className={`flex ${ collapsed ? 'justify-center' : 'px-6'} w-full gap-3 py-3 text-left text-sm font-semibold hover:bg-[#ff1b1c] data-focus:bg-[#ff1b1c]`}
-                    >
-                        {<e.icon className="w-4" />}
-                        {!collapsed && (
-                            <div className="flex items-center gap-2">
-                                {e.name}
+                    <MenuItem key={idx}>
+                        {({ active }) => (
+                            <div
+                                onClick={() => {
+                                    if (e.method === 'POST') {
+                                        router.post(e.href);
+                                    } else {
+                                        router.get(e.href);
+                                    }
+                                }}
+                                className={`
+                                    flex cursor-pointer items-center gap-2
+                                    rounded-lg px-3 py-2 text-sm
+                                    transition
+                                    ${
+                                        active
+                                            ? 'bg-white/10 text-white'
+                                            : 'text-gray-300'
+                                    }
+                                `}
+                            >
+                                <e.icon className="w-4 opacity-80" />
+                                <span>{e.name}</span>
                             </div>
                         )}
                     </MenuItem>
