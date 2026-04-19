@@ -6,7 +6,7 @@ export default function Notifications({collapsed, index}) {
     return (
         <div
             key={index}
-            onClick={() => router.get(route('kanban.index'))}
+            onClick={() => router.get(route('notifications.index'))}
             className={`flex cursor-pointer items-center gap-3 rounded-full w-12 h-12 transition hover:bg-[#ff1b1c] ${
                 collapsed ? 'justify-center' : ''
             }`}

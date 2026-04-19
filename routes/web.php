@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFeedController;
@@ -21,6 +22,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::prefix('kanban')->name('kanban.')->group(function () {
     Route::get('/', [PipelineController::class, 'kanban'])->name('index');
     Route::post('/drop/{project}/to/{stage}', [ProjectController::class, 'drop'])->name('drop');
+});
+
+Route::prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
 });
 
 Route::prefix('projects')->name('projects.')->group(function () {
