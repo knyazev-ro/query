@@ -91,7 +91,7 @@ export default function Sidebar() {
                     {menuItems.map((item, index) => (
                         <item.component
                             key={index}
-                            collapsed={collapsed}
+                            collapsed={true}
                             index={index}
                         />
                     ))}
