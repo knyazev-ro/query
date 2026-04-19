@@ -5,11 +5,11 @@ import {
 } from '@heroicons/react/16/solid';
 import { useState } from 'react';
 
-import Clients from './SidebarComponents/Clients';
+import ImgModel from './SidebarComponents/ImgModel';
 import Contacts from './SidebarComponents/Contacts';
-import Feed from './SidebarComponents/Feed';
+import Model from './SidebarComponents/Model';
 import Kanban from './SidebarComponents/Kanban';
-import Media from './SidebarComponents/Media';
+import Dataset from './SidebarComponents/Dataset';
 import Messages from './SidebarComponents/Messages';
 import Notifications from './SidebarComponents/Notifications';
 import Settings from './SidebarComponents/Settings';
@@ -24,11 +24,9 @@ export default function Sidebar() {
         { component: Kanban },
         { component: Notifications },
         { component: Messages },
-        { component: Feed },
-        { component: Clients },
-        { component: Contacts },
-        { component: Users },
-        { component: Media },
+        { component: Model },
+        { component: Dataset },
+        { component: ImgModel },
     ];
 
     const bottomItems = [

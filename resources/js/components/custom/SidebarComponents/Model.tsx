@@ -1,8 +1,8 @@
 import { BellIcon, ChatBubbleOvalLeftEllipsisIcon, NewspaperIcon } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
-import { AirVent, BoxIcon, DiscIcon } from 'lucide-react';
+import { AirVent, BoxIcon, DiscIcon, LoaderPinwheelIcon } from 'lucide-react';
 
-export default function Feed({collapsed, index}) {
+export default function Model({collapsed, index}) {
     return (
         <div
             key={index}
@@ -11,12 +11,7 @@ export default function Feed({collapsed, index}) {
                 collapsed ? 'justify-center' : ''
             }`}
         >
-            <AirVent className="h-5 w-5 text-[#fcfff3]" />
-            {!collapsed && (
-                <span className="text-sm font-medium text-[#fcfff3]">
-                    {"Лента"}
-                </span>
-            )}
+            <LoaderPinwheelIcon className="h-5 w-5 text-[#fcfff3]" />
         </div>
     );
 }

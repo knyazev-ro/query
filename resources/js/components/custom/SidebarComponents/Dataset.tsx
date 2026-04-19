@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
-import { ImageIcon } from 'lucide-react';
+import { ImageIcon, Layers3Icon } from 'lucide-react';
 
-export default function Media({collapsed, index}) {
+export default function Dataset({collapsed, index}) {
     return (
         <div
             key={index}
@@ -10,12 +10,7 @@ export default function Media({collapsed, index}) {
                 collapsed ? 'justify-center' : ''
             }`}
         >
-            <ImageIcon className="h-5 w-5 text-[#fcfff3]" />
-            {!collapsed && (
-                <span className="text-sm font-medium text-[#fcfff3]">
-                    {"Медиа"}
-                </span>
-            )}
+            <Layers3Icon className="h-5 w-5 text-[#fcfff3]" />
         </div>
     );
 }

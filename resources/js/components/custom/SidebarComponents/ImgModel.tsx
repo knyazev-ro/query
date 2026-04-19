@@ -1,8 +1,8 @@
 import { BellIcon, BuildingOfficeIcon, ChatBubbleOvalLeftEllipsisIcon, NewspaperIcon } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
-import { BoxIcon, DiscIcon } from 'lucide-react';
+import { BoxIcon, DiscIcon, ImageIcon } from 'lucide-react';
 
-export default function Clients({collapsed, index}) {
+export default function ImgModel({collapsed, index}) {
     return (
         <div
             key={index}
@@ -11,12 +11,7 @@ export default function Clients({collapsed, index}) {
                 collapsed ? 'justify-center' : ''
             }`}
         >
-            <BuildingOfficeIcon className="h-5 w-5 text-[#fcfff3]" />
-            {!collapsed && (
-                <span className="text-sm font-medium text-[#fcfff3]">
-                    {"Клиенты"}
-                </span>
-            )}
+            <ImageIcon className="h-5 w-5 text-[#fcfff3]" />
         </div>
     );
 }
