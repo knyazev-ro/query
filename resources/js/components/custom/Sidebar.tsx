@@ -15,6 +15,7 @@ import Notifications from './SidebarComponents/Notifications';
 import Settings from './SidebarComponents/Settings';
 import User from './SidebarComponents/User';
 import Users from './SidebarComponents/Users';
+import { MenuIcon } from 'lucide-react';
 
 export default function Sidebar() {
     const [hovered, setHovered] = useState(false);
@@ -45,7 +46,7 @@ export default function Sidebar() {
                 className={`
                     pointer-events-auto relative
                     transition-all duration-300
-                    ${hovered ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-70'}
+                    ${hovered ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}
                 `}
             >
                 <div
@@ -101,7 +102,7 @@ export default function Sidebar() {
                     "
                 >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a1a1a]/80 shadow-lg backdrop-blur-xl border border-white/10 hover:bg-white/10 transition">
-                        <ChevronUpIcon className="w-5 text-gray-400" />
+                        <MenuIcon className="w-5 text-gray-400" />
                     </div>
                 </div>
             )}
