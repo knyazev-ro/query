@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\DatasetController;
+use App\Http\Controllers\ImgModelController;
 use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
@@ -31,6 +33,14 @@ Route::prefix('notifications')->name('notifications.')->group(function () {
 
 Route::prefix('messager')->name('messager.')->group(function () {
     Route::get('/', [MessagerController::class, 'index'])->name('index');
+});
+
+Route::prefix('datasets')->name('datasets.')->group(function () {
+    Route::get('/', [DatasetController::class, 'index'])->name('index');
+});
+
+Route::prefix('img-models')->name('img-models.')->group(function () {
+    Route::get('/', [ImgModelController::class, 'index'])->name('index');
 });
 
 Route::prefix('projects')->name('projects.')->group(function () {
