@@ -59,7 +59,7 @@ export default function Main() {
 
     return (
         <Layout>
-            <div className="flex h-screen bg-[#0f0f0f] text-white">
+            <div className="flex h-screen bg-[#0f0f0f] text-white overflow-x-hidden">
 
                 {/* SIDEBAR */}
                 <div
@@ -67,7 +67,7 @@ export default function Main() {
                         relative border-r border-white/10
                         bg-[#0b0b0b]
                         transition-all duration-200
-                        ${sidebarCollapsed ? "w-14" : "w-80"}
+                        ${sidebarCollapsed ? "w-14" : "min-w-72 w-72"}
                     `}
                 >
                     {/* collapse button */}
