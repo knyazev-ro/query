@@ -139,11 +139,11 @@ export default function Models() {
             </div>
 
             {/* GRID */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+            <div className="flex flex-wrap gap-4">
                 {models.map((model) => (
                     <div
                         key={model.id}
-                        className="relative aspect-square rounded-lg border border-white/10 bg-[#141414] p-4"
+                        className="relative aspect-square w-72 rounded-lg border border-white/10 bg-[#141414] p-4"
                     >
                         {/* HEADER */}
                         <div className="mb-3 flex items-center gap-2">
