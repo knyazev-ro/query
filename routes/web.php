@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DatasetController;
 use App\Http\Controllers\GraphController;
+use App\Http\Controllers\ImgCompressModelController;
 use App\Http\Controllers\ImgModelController;
 use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
@@ -38,10 +39,29 @@ Route::prefix('messager')->name('messager.')->group(function () {
 
 Route::prefix('datasets')->name('datasets.')->group(function () {
     Route::get('/', [DatasetController::class, 'index'])->name('index');
+    Route::get('/create', [DatasetController::class, 'create'])->name('create');
+    Route::get('/show/{dataset}', [DatasetController::class, 'show'])->name('show');
+    Route::post('/store', [DatasetController::class, 'store'])->name('store');
+    Route::post('/load', [DatasetController::class, 'loadDataset'])->name('load');
+    Route::post('/update/{dataset}', [DatasetController::class, 'update'])->name('update');
+    Route::post('/delete/{dataset}', [DatasetController::class, 'destroy'])->name('delete');
 });
 
 Route::prefix('img-models')->name('img-models.')->group(function () {
     Route::get('/', [ImgModelController::class, 'index'])->name('index');
+});
+
+Route::prefix('img-compress-models')->name('img-compress-models.')->group(function () {
+    Route::get('/', [ImgCompressModelController::class, 'index'])->name('index');
+    Route::get('/create', [ImgCompressModelController::class, 'createModel'])->name('create');
+    Route::get('/show/{imgCompressModel}', [ImgCompressModelController::class, 'show'])->name('show');
+    Route::post('/store', [ImgCompressModelController::class, 'storeModel'])->name('store');
+    Route::post('/update/{imgCompressModel}', [ImgCompressModelController::class, 'updateModel'])->name('update');
+    Route::post('/delete/{imgCompressModel}', [ImgCompressModelController::class, 'deleteModel'])->name('delete');
+    Route::get('/versions/{imgCompressModel}/edit', [ImgCompressModelController::class, 'editVersion'])->name('versions.edit');
+    Route::post('/versions/from/{modelVersion?}', [ImgCompressModelController::class, 'createNewVersionFrom'])->name('versions.store');
+    Route::post('/versions/update/{modelVersion}', [ImgCompressModelController::class, 'updateVersion'])->name('versions.update');
+    Route::post('/versions/delete/{modelVersion}', [ImgCompressModelController::class, 'deleteVersion'])->name('versions.delete');
 });
 
 Route::prefix('graph')->name('graph.')->group(function () {
