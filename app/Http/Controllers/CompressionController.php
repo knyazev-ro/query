@@ -47,11 +47,6 @@ class CompressionController extends Controller
         $this->authorizeImage($imgMedia);
 
         $imgMedia->load(['author', 'modelVersion.model']);
-
-        if (request()->expectsJson()) {
-            return $imgMedia;
-        }
-
         return Inertia::render('Compressions/Show', compact('imgMedia'));
     }
 
@@ -198,10 +193,6 @@ class CompressionController extends Controller
 
     private function responseFor(Request $request, array $payload)
     {
-        if ($request->expectsJson()) {
-            return response()->json($payload);
-        }
-
         return Redirect::back()->with('message', $payload['message']);
     }
 }
