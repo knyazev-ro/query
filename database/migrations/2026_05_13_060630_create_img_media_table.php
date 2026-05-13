@@ -27,6 +27,11 @@ return new class extends Migration
                 ->constrained('users')
                 ->cascadeOnDelete();
 
+            $table->foreignId('model_version_id')
+                ->nullable()
+                ->constrained('model_versions')
+                ->nullOnDelete();
+
             // polymorphic relation
             // либо так короче:
             $table->nullableMorphs('entity');

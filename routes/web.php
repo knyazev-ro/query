@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DatasetController;
 use App\Http\Controllers\GraphController;
+use App\Http\Controllers\CompressionController;
 use App\Http\Controllers\ImgCompressModelController;
 use App\Http\Controllers\ImgModelController;
 use App\Http\Controllers\MessagerController;
@@ -62,6 +63,15 @@ Route::prefix('img-compress-models')->name('img-compress-models.')->group(functi
     Route::post('/versions/from/{modelVersion?}', [ImgCompressModelController::class, 'createNewVersionFrom'])->name('versions.store');
     Route::post('/versions/update/{modelVersion}', [ImgCompressModelController::class, 'updateVersion'])->name('versions.update');
     Route::post('/versions/delete/{modelVersion}', [ImgCompressModelController::class, 'deleteVersion'])->name('versions.delete');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('compressions')->name('compressions.')->group(function () {
+    Route::get('/', [CompressionController::class, 'index'])->name('index');
+    Route::get('/show/{imgMedia}', [CompressionController::class, 'show'])->name('show');
+    Route::post('/store', [CompressionController::class, 'store'])->name('store');
+    Route::post('/update/{imgMedia}', [CompressionController::class, 'update'])->name('update');
+    Route::post('/delete/{imgMedia}', [CompressionController::class, 'destroy'])->name('delete');
+    Route::post('/cancel/{modelVersion}', [CompressionController::class, 'cancel'])->name('cancel');
 });
 
 Route::prefix('graph')->name('graph.')->group(function () {

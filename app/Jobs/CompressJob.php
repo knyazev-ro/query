@@ -34,6 +34,7 @@ class CompressJob implements ShouldQueue
 
         $imgMedia = ImgMedia::query()
             ->whereIn('id', $this->imgMediaIds)
+            ->where('model_version_id', $modelVersion->id)
             ->where('status', 'just created')
             ->get();
 

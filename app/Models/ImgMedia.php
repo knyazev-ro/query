@@ -17,6 +17,7 @@ class ImgMedia extends Model
         'original_size',
         'compressed_size', // nullable
         'author_id',
+        'model_version_id',
         
         // morph
         'entity_id',
@@ -25,8 +26,19 @@ class ImgMedia extends Model
         'status',
     ];
 
+    protected $casts = [
+        'original_size' => 'integer',
+        'compressed_size' => 'integer',
+        'author_id' => 'integer',
+        'model_version_id' => 'integer',
+    ];
+
     public function author(): BelongsTo {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function modelVersion(): BelongsTo {
+        return $this->belongsTo(ModelVersion::class, 'model_version_id');
     }
 
     public function saveImg(UploadedFile $uploadedFile) {
