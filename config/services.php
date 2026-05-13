@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'img_compress_ml' => [
+        'url' => env('IMG_COMPRESS_ML_URL', 'http://127.0.0.1:8001'),
+        'timeout' => env('IMG_COMPRESS_ML_TIMEOUT', 60),
+    ],
+
 ];

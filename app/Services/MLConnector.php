@@ -6,24 +6,44 @@ use App\Models\ImgMedia;
 use App\Models\ModelVersion;
 use GuzzleHttp\Client;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+use Throwable;
 
 class MLConnector
 {
     protected Client $client;
     protected string $url;
+
     public function __construct()
     {
-        $this->url = config('services.img_compress_ml.url');
+        $this->url = rtrim((string) config('services.img_compress_ml.url'), '/');
         $this->client = new Client([
-            'timeout' => 60,
+            'timeout' => config('services.img_compress_ml.timeout', 60),
             'base_uri' => $this->url,
         ]);
     }
+
     public function train(ModelVersion $modelVersion)
     {
-        $model = $modelVersion->load(['datasets', 'author', 'model']);
-        $response = $this->client->post('/train', $model->toArray());
-        // etc
+        try {
+            $modelVersion->update([
+                'status' => 'run',
+                'errors' => null,
+            ]);
+
+            return $this->postJson('/train', [
+                'model_version' => $this->modelVersionPayload($modelVersion),
+                'callback_url' => route('callbacks.train', absolute: true),
+            ]);
+        } catch (Throwable $exception) {
+            $modelVersion->update([
+                'status' => 'error',
+                'errors' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     /**
@@ -38,14 +58,25 @@ class MLConnector
      */
     public function compress(ModelVersion $modelVersion, Collection $imgMedia)
     {
-        $model = $modelVersion->load(['datasets', 'author', 'model']);
-        $response = $this->client->post('/compress', [
-            'model' => $model->toArray(),
-            'images' => $imgMedia->toArray(), // base64 array of images
-        ]);
-        // response return array of paths
-        // like, if image was named images/<userID>/img1.jpg
-        // then 
+        try {
+            $imgMedia->each->update([
+                'status' => 'compressing',
+                'errors' => '',
+            ]);
+
+            return $this->postJson('/compress', [
+                'model_version' => $this->modelVersionPayload($modelVersion),
+                'images' => $this->imagesPayload($imgMedia, 'img_path'),
+                'callback_url' => route('callbacks.compression', absolute: true),
+            ]);
+        } catch (Throwable $exception) {
+            $imgMedia->each->update([
+                'status' => 'error',
+                'errors' => $exception->getMessage(),
+            ]);
+
+            throw $exception;
+        }
     }
 
     /**
@@ -59,14 +90,75 @@ class MLConnector
      */
     public function decompress(ModelVersion $modelVersion, Collection $imgMedia)
     {
-        $model = $modelVersion->load(['datasets', 'author', 'model']);
-        $response = $this->client->post('/decompress', [
-            'model' => $model->toArray(),
-            'images' => $imgMedia->toArray(), // base64 array of images
+        return $this->postJson('/decompress', [
+            'model_version' => $this->modelVersionPayload($modelVersion),
+            'images' => $this->imagesPayload($imgMedia, 'compressed_img_path'),
         ]);
-        // in response json 
-        // id of img media -> base64 of decompressed image
-        // then those images convert to zip
-        // then download!
+    }
+
+    private function postJson(string $uri, array $payload): array
+    {
+        $response = $this->client->post($uri, [
+            'json' => $payload,
+            'headers' => [
+                'Accept' => 'application/json',
+            ],
+        ]);
+
+        $body = (string) $response->getBody();
+
+        if ($body === '') {
+            return [
+                'status_code' => $response->getStatusCode(),
+            ];
+        }
+
+        return json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    private function modelVersionPayload(ModelVersion $modelVersion): array
+    {
+        $modelVersion = $modelVersion->loadMissing(['datasets', 'author', 'model']);
+        $payload = $modelVersion->toArray();
+
+        $payload['datasets'] = $modelVersion->datasets
+            ->map(function ($dataset) {
+                $data = $dataset->toArray();
+                $data['file_base64'] = $this->fileBase64($dataset->file_path);
+
+                return $data;
+            })
+            ->values()
+            ->all();
+
+        return $payload;
+    }
+
+    private function imagesPayload(Collection $imgMedia, string $pathAttribute): array
+    {
+        return $imgMedia
+            ->map(function (ImgMedia $image) use ($pathAttribute) {
+                $path = $image->{$pathAttribute} ?: $image->img_path;
+
+                if ($path === null) {
+                    throw new RuntimeException("Image {$image->id} does not have a path for {$pathAttribute}.");
+                }
+
+                return [
+                    ...$image->toArray(),
+                    'file_base64' => $this->fileBase64($path),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function fileBase64(string $path): string
+    {
+        if (! Storage::exists($path)) {
+            throw new RuntimeException("File {$path} does not exist in storage.");
+        }
+
+        return base64_encode(Storage::get($path));
     }
 }
