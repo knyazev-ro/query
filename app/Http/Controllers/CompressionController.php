@@ -50,6 +50,24 @@ class CompressionController extends Controller
         return Inertia::render('Compressions/Show', compact('imgMedia'));
     }
 
+    public function original(ImgMedia $imgMedia)
+    {
+        $this->authorizeImage($imgMedia);
+
+        abort_if($imgMedia->img_path === null || ! Storage::exists($imgMedia->img_path), 404);
+
+        return Storage::response($imgMedia->img_path, $imgMedia->original_name);
+    }
+
+    public function compressed(ImgMedia $imgMedia)
+    {
+        $this->authorizeImage($imgMedia);
+
+        abort_if($imgMedia->compressed_img_path === null || ! Storage::exists($imgMedia->compressed_img_path), 404);
+
+        return Storage::response($imgMedia->compressed_img_path, $imgMedia->original_name);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

@@ -10,6 +10,7 @@ import Contacts from './SidebarComponents/Contacts';
 import Model from './SidebarComponents/Model';
 import Kanban from './SidebarComponents/Kanban';
 import Dataset from './SidebarComponents/Dataset';
+import Compression from './SidebarComponents/Compression';
 import Messages from './SidebarComponents/Messages';
 import Notifications from './SidebarComponents/Notifications';
 import Settings from './SidebarComponents/Settings';
@@ -26,6 +27,7 @@ export default function Sidebar() {
         { component: Messages },
         { component: Model },
         { component: Dataset },
+        { component: Compression },
         { component: ImgModel },
     ];
 
@@ -65,7 +67,7 @@ export default function Sidebar() {
                                 hover:bg-white/10 hover:scale-105
                             "
                         >
-                            <Item.component collapsed />
+                            <Item.component collapsed index={index} />
                         </div>
                     ))}
 
@@ -83,7 +85,7 @@ export default function Sidebar() {
                                 hover:bg-white/10 hover:text-white hover:scale-105
                             "
                         >
-                            <Item.component collapsed />
+                            <Item.component collapsed index={index} />
                         </div>
                     ))}
                 </div>

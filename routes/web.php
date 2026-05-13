@@ -69,6 +69,8 @@ Route::middleware(['auth', 'verified'])->prefix('compressions')->name('compressi
     Route::get('/', [CompressionController::class, 'index'])->name('index');
     Route::get('/create', [CompressionController::class, 'create'])->name('create');
     Route::get('/show/{imgMedia}', [CompressionController::class, 'show'])->name('show');
+    Route::get('/original/{imgMedia}', [CompressionController::class, 'original'])->name('original');
+    Route::get('/compressed/{imgMedia}', [CompressionController::class, 'compressed'])->name('compressed');
     Route::post('/store', [CompressionController::class, 'store'])->name('store');
     Route::post('/update/{imgMedia}', [CompressionController::class, 'update'])->name('update');
     Route::post('/delete/{imgMedia}', [CompressionController::class, 'destroy'])->name('delete');

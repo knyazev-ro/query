@@ -48,6 +48,45 @@ declare module 'ziggy-js' {
     "user-password.update": [],
     "appearance.edit": [],
     "two-factor.show": [],
+    "compressions.index": [],
+    "compressions.create": [],
+    "compressions.show": [
+        {
+            "name": "imgMedia",
+            "required": true
+        }
+    ],
+    "compressions.original": [
+        {
+            "name": "imgMedia",
+            "required": true
+        }
+    ],
+    "compressions.compressed": [
+        {
+            "name": "imgMedia",
+            "required": true
+        }
+    ],
+    "compressions.store": [],
+    "compressions.update": [
+        {
+            "name": "imgMedia",
+            "required": true
+        }
+    ],
+    "compressions.delete": [
+        {
+            "name": "imgMedia",
+            "required": true
+        }
+    ],
+    "compressions.cancel": [
+        {
+            "name": "modelVersion",
+            "required": true
+        }
+    ],
     "storage.local": [
         {
             "name": "path",
