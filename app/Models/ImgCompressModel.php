@@ -34,6 +34,6 @@ class ImgCompressModel extends Model
 
     public function latestVersion(): HasOne
     {
-        return $this->versions()->latestOfMany();
+        return $this->hasOne(ModelVersion::class)->latestOfMany('version_number');
     }
 }
