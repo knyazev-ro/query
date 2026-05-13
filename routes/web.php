@@ -67,6 +67,7 @@ Route::prefix('img-compress-models')->name('img-compress-models.')->group(functi
 
 Route::middleware(['auth', 'verified'])->prefix('compressions')->name('compressions.')->group(function () {
     Route::get('/', [CompressionController::class, 'index'])->name('index');
+    Route::get('/create', [CompressionController::class, 'create'])->name('create');
     Route::get('/show/{imgMedia}', [CompressionController::class, 'show'])->name('show');
     Route::post('/store', [CompressionController::class, 'store'])->name('store');
     Route::post('/update/{imgMedia}', [CompressionController::class, 'update'])->name('update');
