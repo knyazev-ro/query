@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('author_id')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedInteger('version_number');
             $table->unsignedSmallInteger('image_resolution')->default(256);
-            $table->string('status')->default('queue');
+            $table->string('status')->default('queue'); // queue run ready cancel error
             $table->text('errors')->nullable();
             $table->timestamps();
 

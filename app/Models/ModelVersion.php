@@ -14,7 +14,7 @@ class ModelVersion extends Model
         'parent_version_id', // nullable (from what version get datasets)
         'version_number', // not null
         'image_resolution', // 64 128 256 512
-        'status', // in queue/training/ready/cancel/error,
+        'status', // in queue/run/ready/cancel/error,
         'author_id',
         'errors' // long text TEXT
     ];

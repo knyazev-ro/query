@@ -34,6 +34,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['entity_id', 'entity_type']);
+
+            $table->string('status')->default('just created'); // "just created" "compressing" "compressed" "error" "cancel"
+            $table->text('errors');
         });
     }
 

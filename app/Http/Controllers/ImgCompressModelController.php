@@ -33,7 +33,7 @@ class ImgCompressModelController extends Controller
     {
         return $imgCompressModel->load([
             'author',
-            'versions' => fn ($query) => $query->with(['author', 'parentVersion', 'datasets'])->orderBy('version_number'),
+            'versions' => fn($query) => $query->with(['author', 'parentVersion', 'datasets'])->orderBy('version_number'),
         ]);
     }
 
@@ -85,7 +85,7 @@ class ImgCompressModelController extends Controller
     public function editVersion(ImgCompressModel $imgCompressModel)
     {
         $imgCompressModel->load([
-            'versions' => fn ($query) => $query->with(['parentVersion', 'datasets'])->orderBy('version_number'),
+            'versions' => fn($query) => $query->with(['parentVersion', 'datasets'])->orderBy('version_number'),
         ]);
 
         $datasets = Dataset::query()
@@ -184,7 +184,7 @@ class ImgCompressModelController extends Controller
             'dataset_ids' => [$requireDatasets ? 'required' : 'sometimes', 'array'],
             'dataset_ids.*' => 'integer|exists:datasets,id',
             'image_resolution' => 'nullable|integer|in:64,128,256,512',
-            'status' => 'nullable|string|in:queue,training,ready,cancel,error',
+            'status' => 'nullable|string|in:queue,run,ready,cancel,error',
             'errors' => 'nullable|string',
         ];
     }

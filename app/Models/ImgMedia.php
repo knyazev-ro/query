@@ -21,6 +21,8 @@ class ImgMedia extends Model
         // morph
         'entity_id',
         'entity_type',
+        'errors',
+        'status',
     ];
 
     public function author(): BelongsTo {
