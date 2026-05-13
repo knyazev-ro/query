@@ -13,7 +13,27 @@ return new class extends Migration
     {
         Schema::create('img_media', function (Blueprint $table) {
             $table->id();
+
+            $table->string('img_path')->nullable();
+            $table->string('compressed_img_path')->nullable();
+
+            $table->string('original_name');
+            $table->string('mime_type');
+
+            $table->unsignedBigInteger('original_size');
+            $table->unsignedBigInteger('compressed_size')->nullable();
+
+            $table->foreignId('author_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            // polymorphic relation
+            // либо так короче:
+            $table->nullableMorphs('entity');
+
             $table->timestamps();
+
+            $table->index(['entity_id', 'entity_type']);
         });
     }
 

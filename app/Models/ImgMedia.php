@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class ImgMedia extends Model
 {
     protected $fillable = [
-        'img_path',
+        'img_path', // nullable
         'compressed_img_path', //nullable
         'original_name',
         'mime_type',
@@ -23,5 +25,19 @@ class ImgMedia extends Model
 
     public function author(): BelongsTo {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function saveImg(UploadedFile $uploadedFile) {
+        $path = Storage::putFile("img-media/{$this->id}", $uploadedFile);
+        $this->img_path = $path;
+        $this->original_name = $uploadedFile->getClientOriginalName();
+        $this->mime_type = $uploadedFile->getMimeType();
+        $this->original_size = ($uploadedFile->getSize() ?? 0);
+        //etc...
+        $this->save();
+    }
+
+    public function entity() {
+        return $this->morphTo();
     }
 }
