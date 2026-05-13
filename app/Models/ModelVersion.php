@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\TrainJob;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -26,6 +27,21 @@ class ModelVersion extends Model
         'image_resolution' => 'integer',
         'author_id' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $modelVersion): void {
+            if ($modelVersion->status !== 'queue') {
+                return;
+            }
+
+            if (! $modelVersion->wasRecentlyCreated && ! $modelVersion->wasChanged('status')) {
+                return;
+            }
+
+            TrainJob::dispatch($modelVersion->id)->afterCommit();
+        });
+    }
 
     public function model(): BelongsTo
     {

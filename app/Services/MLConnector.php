@@ -96,6 +96,35 @@ class MLConnector
         ]);
     }
 
+    public function cancelTrain(ModelVersion $modelVersion): array
+    {
+        $response = $this->postJson('/train/cancel', [
+            'model_version_id' => $modelVersion->id,
+        ]);
+
+        $modelVersion->update([
+            'status' => 'cancel',
+            'errors' => null,
+        ]);
+
+        return $response;
+    }
+
+    public function cancelCompression(ModelVersion $modelVersion, Collection $imgMedia): array
+    {
+        $response = $this->postJson('/compress/cancel', [
+            'model_version_id' => $modelVersion->id,
+            'image_ids' => $imgMedia->pluck('id')->values()->all(),
+        ]);
+
+        $imgMedia->each->update([
+            'status' => 'cancel',
+            'errors' => '',
+        ]);
+
+        return $response;
+    }
+
     private function postJson(string $uri, array $payload): array
     {
         $response = $this->client->post($uri, [
