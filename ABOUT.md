@@ -72,6 +72,7 @@
 - `image_resolution`: одно из `64`, `128`, `256`, `512`
 - `status`: `queue`, `run`, `ready`, `cancel`, `error`
 - `errors`
+- `progress`: JSON/JSONB с текущим прогрессом обучения
 - `datasets[]`
 - `model`
 - `author`
@@ -114,6 +115,8 @@ Laravel передает датасеты внутри `model_version.datasets`.
   - train/test split;
   - optional horizontal flip через `do_flip`;
   - optional rotation через `rotation_degree`.
+
+Для Docker-интеграции важно, что Laravel `local` disk хранит такие файлы в `storage/app/private`. Если в Python задан `IMG_COMPRESS_STORAGE_ROOT`, он должен указывать именно на этот корень, например `/web/service/storage/app/private`. Тогда `file_path = datasets/example.zip` резолвится как `/web/service/storage/app/private/datasets/example.zip`.
 
 ## Изображения Для Сжатия
 
@@ -415,7 +418,25 @@ Request body:
 {
   "id": 1,
   "status": "ready",
-  "errors": null
+  "errors": null,
+  "progress": {
+    "percent": 100,
+    "current_epoch": 1,
+    "total_epochs": 1,
+    "current_step": 120,
+    "total_steps": 120,
+    "completed_steps": 120,
+    "remaining_steps": 0,
+    "total_iterations": 120,
+    "losses": {
+      "autoencoder": 0.01,
+      "reconstruction": 0.01,
+      "adversarial": 0.2,
+      "discriminator": 0.5
+    },
+    "message": "Training completed",
+    "updated_at": "2026-05-14T19:40:00+00:00"
+  }
 }
 ```
 
@@ -432,6 +453,9 @@ Fields:
 - `id` - `model_versions.id`.
 - `status` - новый статус версии.
 - `errors` - nullable string.
+- `progress` - nullable object. Python отправляет его во время обучения примерно каждые 20 batch-итераций, Laravel сохраняет в `model_versions.progress`.
+
+Frontend на странице моделей использует polling для версий в статусах `queue` и `run`, чтобы обновлять `progress` без ручной перезагрузки страницы.
 
 ### Compression Callback
 
@@ -594,7 +618,6 @@ Compression:
 - будет ли общий Docker volume или object storage;
 - нужен ли callback auth token;
 - формат compressed artifact: `.npz`, `.pt`, custom binary;
-- нужно ли возвращать progress percent в callback-и;
 - нужно ли хранить training metrics и где их показывать в Laravel.
 
 ## Быстрая Карта Laravel Интеграции

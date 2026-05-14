@@ -17,7 +17,8 @@ class ModelVersion extends Model
         'image_resolution', // 64 128 256 512
         'status', // in queue/run/ready/cancel/error,
         'author_id',
-        'errors' // long text TEXT
+        'errors', // long text TEXT
+        'progress',
     ];
 
     protected $casts = [
@@ -26,6 +27,7 @@ class ModelVersion extends Model
         'version_number' => 'integer',
         'image_resolution' => 'integer',
         'author_id' => 'integer',
+        'progress' => 'array',
     ];
 
     protected static function booted(): void

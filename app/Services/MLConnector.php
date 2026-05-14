@@ -6,6 +6,7 @@ use App\Models\ImgMedia;
 use App\Models\ModelVersion;
 use GuzzleHttp\Client;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
@@ -152,8 +153,9 @@ class MLConnector
         if ($baseUrl === '') {
             return route($routeName, absolute: true);
         }
-
-        return rtrim($baseUrl, '/').'/'.ltrim(route($routeName, absolute: false), '/');
+        $r = rtrim($baseUrl, '/').'/'.ltrim(route($routeName, absolute: false), '/');
+        Log::info($r);
+        return $r;
     }
 
     private function modelVersionPayload(ModelVersion $modelVersion): array

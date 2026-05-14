@@ -74,6 +74,7 @@ class CallbackController extends Controller
                 'cancel',
                 'error',
             ])],
+            'progress' => 'nullable|array',
         ]);
 
         $modelVersion = ModelVersion::findOrFail($validated['id']);
@@ -81,6 +82,7 @@ class CallbackController extends Controller
         $modelVersion->update([
             'status' => $validated['status'],
             'errors' => $validated['errors'] ?? null,
+            'progress' => $validated['progress'] ?? $modelVersion->progress,
         ]);
 
         return response()->json([

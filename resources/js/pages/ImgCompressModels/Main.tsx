@@ -7,6 +7,7 @@ import {
 } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
 import { DatabaseIcon, GitBranchIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import type { ImgCompressModel, PaginatedModels } from './types';
 
 const statusClass: Record<string, string> = {
@@ -19,6 +20,23 @@ const statusClass: Record<string, string> = {
 
 export default function Main({ models }: { models: PaginatedModels }) {
     const items = models?.data ?? [];
+    const hasActiveTraining = items.some((model) =>
+        ['queue', 'run'].includes(model.latest_version?.status ?? ''),
+    );
+
+    useEffect(() => {
+        if (!hasActiveTraining) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['models'],
+            });
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, [hasActiveTraining]);
 
     const deleteModel = (model: ImgCompressModel) => {
         if (!confirm(`Delete model "${model.name}" with all versions?`)) {
@@ -122,6 +140,63 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                                 {version.image_resolution}x
                                                 {version.image_resolution}
                                             </div>
+
+                                            {['queue', 'run'].includes(
+                                                version.status,
+                                            ) && (
+                                                <div className="mb-3">
+                                                    <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-gray-500">
+                                                        <span className="truncate">
+                                                            {version.progress
+                                                                ?.message ??
+                                                                'Waiting for training'}
+                                                        </span>
+                                                        <span className="shrink-0 text-gray-400">
+                                                            {Math.round(
+                                                                version
+                                                                    .progress
+                                                                    ?.percent ??
+                                                                    0,
+                                                            )}
+                                                            %
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="h-1.5 overflow-hidden rounded bg-white/10">
+                                                        <div
+                                                            className="h-full rounded bg-amber-400 transition-all"
+                                                            style={{
+                                                                width: `${Math.min(
+                                                                    Math.max(
+                                                                        version
+                                                                            .progress
+                                                                            ?.percent ??
+                                                                            0,
+                                                                        0,
+                                                                    ),
+                                                                    100,
+                                                                )}%`,
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    {version.progress
+                                                        ?.total_iterations ? (
+                                                        <div className="mt-1 text-[10px] text-gray-600">
+                                                            {
+                                                                version.progress
+                                                                    .completed_steps
+                                                            }
+                                                            /
+                                                            {
+                                                                version.progress
+                                                                    .total_iterations
+                                                            }{' '}
+                                                            iterations
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            )}
 
                                             <div className="flex flex-wrap gap-1">
                                                 {version.datasets
