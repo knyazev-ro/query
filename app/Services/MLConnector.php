@@ -151,12 +151,7 @@ class MLConnector
         $payload = $modelVersion->toArray();
 
         $payload['datasets'] = $modelVersion->datasets
-            ->map(function ($dataset) {
-                $data = $dataset->toArray();
-                $data['file_base64'] = $this->fileBase64($dataset->file_path);
-
-                return $data;
-            })
+            ->map(fn ($dataset) => $dataset->toArray())
             ->values()
             ->all();
 
