@@ -34,7 +34,7 @@ class MLConnector
 
             return $this->postJson('/train', [
                 'model_version' => $this->modelVersionPayload($modelVersion),
-                'callback_url' => route('callbacks.train', absolute: true),
+                'callback_url' => $this->callbackUrl('callbacks.train'),
             ]);
         } catch (Throwable $exception) {
             $modelVersion->update([
@@ -67,7 +67,7 @@ class MLConnector
             return $this->postJson('/compress', [
                 'model_version' => $this->modelVersionPayload($modelVersion),
                 'images' => $this->imagesPayload($imgMedia, 'img_path'),
-                'callback_url' => route('callbacks.compression', absolute: true),
+                'callback_url' => $this->callbackUrl('callbacks.compression'),
             ]);
         } catch (Throwable $exception) {
             $imgMedia->each->update([
@@ -143,6 +143,17 @@ class MLConnector
         }
 
         return json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    private function callbackUrl(string $routeName): string
+    {
+        $baseUrl = trim((string) config('services.img_compress_ml.callback_base_url', ''));
+
+        if ($baseUrl === '') {
+            return route($routeName, absolute: true);
+        }
+
+        return rtrim($baseUrl, '/').'/'.ltrim(route($routeName, absolute: false), '/');
     }
 
     private function modelVersionPayload(ModelVersion $modelVersion): array

@@ -15,6 +15,7 @@
 - Callback-и от микросервиса: `app/Http/Controllers/CallbackController.php`.
 - URL микросервиса задается через `IMG_COMPRESS_ML_URL`, дефолт `http://127.0.0.1:8001`.
 - Timeout задается через `IMG_COMPRESS_ML_TIMEOUT`, дефолт `60`.
+- Base URL для callback-ов задается через `IMG_COMPRESS_CALLBACK_BASE_URL`. Если Laravel запущен на host machine, а микросервис внутри Docker, обычно нужно `http://host.docker.internal:8000`.
 
 Основные Laravel модели для ML-сценариев:
 
@@ -397,6 +398,8 @@ Behavior:
 ## Callback-и В Laravel
 
 Микросервис должен отправлять callback-и на URL, который Laravel передает в `callback_url`.
+
+Laravel формирует `callback_url` через route name. По умолчанию используется обычный absolute URL из `APP_URL`. Если задан `IMG_COMPRESS_CALLBACK_BASE_URL`, он заменяет только host/scheme/port, а путь остается Laravel route path. Это нужно для Docker-сценария, где микросервис не может достучаться до `localhost` хостовой машины.
 
 ### Training Callback
 
