@@ -15,7 +15,7 @@ type VersionForm = {
     parent_version_id: number | '';
     dataset_ids: number[];
     image_resolution: number;
-    status: 'queue' | 'training' | 'ready' | 'cancel' | 'error';
+    status: 'queue' | 'run' | 'ready' | 'cancel' | 'error';
     errors: string;
 };
 
@@ -26,7 +26,7 @@ type ModelForm = {
 
 const statusClass: Record<string, string> = {
     queue: 'bg-white/5 text-gray-400',
-    training: 'bg-amber-500/10 text-amber-300',
+    run: 'bg-amber-500/10 text-amber-300',
     ready: 'bg-emerald-500/10 text-emerald-300',
     cancel: 'bg-zinc-500/10 text-zinc-400',
     error: 'bg-[#ff1b1c]/10 text-[#ff6b6c]',
@@ -321,9 +321,7 @@ export default function EditVersion({
                                             className={fieldClass}
                                         >
                                             <option value="queue">queue</option>
-                                            <option value="training">
-                                                training
-                                            </option>
+                                            <option value="run">run</option>
                                             <option value="ready">ready</option>
                                             <option value="cancel">cancel</option>
                                             <option value="error">error</option>

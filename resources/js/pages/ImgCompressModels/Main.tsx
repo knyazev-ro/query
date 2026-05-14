@@ -11,7 +11,7 @@ import type { ImgCompressModel, PaginatedModels } from './types';
 
 const statusClass: Record<string, string> = {
     queue: 'bg-white/5 text-gray-400',
-    training: 'bg-amber-500/10 text-amber-300',
+    run: 'bg-amber-500/10 text-amber-300',
     ready: 'bg-emerald-500/10 text-emerald-300',
     cancel: 'bg-zinc-500/10 text-zinc-400',
     error: 'bg-[#ff1b1c]/10 text-[#ff6b6c]',

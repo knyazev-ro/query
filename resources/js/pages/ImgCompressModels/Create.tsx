@@ -9,7 +9,7 @@ type ModelForm = {
     description: string;
     dataset_ids: number[];
     image_resolution: number;
-    status: 'queue' | 'training' | 'ready' | 'cancel' | 'error';
+    status: 'queue' | 'run' | 'ready' | 'cancel' | 'error';
     errors: string;
 };
 
@@ -143,7 +143,7 @@ export default function Create({ datasets }: { datasets: Dataset[] }) {
                                     className={fieldClass}
                                 >
                                     <option value="queue">queue</option>
-                                    <option value="training">training</option>
+                                    <option value="run">run</option>
                                     <option value="ready">ready</option>
                                     <option value="cancel">cancel</option>
                                     <option value="error">error</option>

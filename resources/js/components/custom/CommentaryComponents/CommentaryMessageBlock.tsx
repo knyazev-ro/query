@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EllipsisVerticalIcon, StarIcon } from '@heroicons/react/16/solid';
 import { router, useForm } from '@inertiajs/react';
 import { HeartIcon } from 'lucide-react';

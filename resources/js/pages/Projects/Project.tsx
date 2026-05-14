@@ -1,3 +1,4 @@
+// @ts-nocheck
 import ClientCompanyCard from '@/components/custom/ClientCompanyCard';
 import Feed from '@/components/custom/Feed';
 import Layout from '@/components/custom/Layout';

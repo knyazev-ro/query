@@ -46,7 +46,8 @@ const CompactTable = ({
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
-                                    const colWidth = header.column.columnDef.width || 'auto';
+                                    const columnDef = header.column.columnDef as any;
+                                    const colWidth = columnDef.width || 'auto';
 
                                     return (
                                         <TableCell
@@ -96,7 +97,8 @@ const CompactTable = ({
                                     }}
                                 >
                                     {row.getVisibleCells().map((cell) => {
-                                        const colWidth = cell.column.columnDef.width || 'auto';
+                                        const columnDef = cell.column.columnDef as any;
+                                        const colWidth = columnDef.width || 'auto';
 
                                         return (
                                             <TableCell
@@ -114,7 +116,7 @@ const CompactTable = ({
                                                     textOverflow: 'ellipsis',
                                                     whiteSpace: 'nowrap',
                                                     boxSizing: 'border-box',
-                                                    textAlign: cell.column.columnDef.align || 'center',
+                                                    textAlign: columnDef.align || 'center',
                                                 }}
                                             >
                                                 {/* Если внутри ячейки сложная верстка (grid 2x2),

@@ -7,7 +7,7 @@ async function fetchPipelines(search, page = 1) {
   try {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
-    params.append('page', page);
+    params.append('page', String(page));
 
     const { data } = await axios.get(
       `${route('api.crm.pipelines')}?${params.toString()}`

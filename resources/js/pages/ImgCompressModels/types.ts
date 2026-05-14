@@ -16,7 +16,7 @@ export type ModelVersion = {
     parent_version_id: number | null;
     version_number: number;
     image_resolution: number;
-    status: 'queue' | 'training' | 'ready' | 'cancel' | 'error';
+    status: 'queue' | 'run' | 'ready' | 'cancel' | 'error';
     errors?: string | null;
     author?: Author | null;
     parent_version?: ModelVersion | null;

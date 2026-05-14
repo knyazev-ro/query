@@ -50,7 +50,7 @@ export default function Kanban({ stages: initialStages, pipelines }) {
             return copy;
         });
 
-        router.post(route('kanban.drop', [fromProjectId, toStageId]), {
+        router.post(route('kanban.drop', [fromProjectId, toStageId]), {}, {
             onError: (errors) => {
                 console.error('Drop failed', errors);
             },

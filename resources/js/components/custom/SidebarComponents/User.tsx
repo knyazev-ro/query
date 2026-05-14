@@ -4,7 +4,7 @@ import { router } from '@inertiajs/react';
 import { LogOutIcon } from 'lucide-react';
 import { route } from 'ziggy-js';
 
-export default function User({ collapsed }) {
+export default function User({ collapsed }: { collapsed: boolean; index?: number }) {
     const items = [
         {
             name: 'Мой профиль',

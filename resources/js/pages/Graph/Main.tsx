@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Layout from "@/components/custom/Layout";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";

@@ -2,9 +2,43 @@ import FTable from '@/components/custom/FTable';
 import axios from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/custom/Layout';
-// import CellAction
-// import ColumnHeader
 import { router } from '@inertiajs/react';
+
+function CellAction({ value }) {
+    const row = value?.row?.original;
+
+    return (
+        <button
+            type="button"
+            onClick={() => row?.id && router.get(route('projects.show', row.id))}
+            className="rounded bg-[#7700ff] px-2 py-1 text-xs font-semibold text-white transition hover:bg-blue-600"
+        >
+            Open
+        </button>
+    );
+}
+
+function ColumnHeader({ title, col, sortAndFilter, setSortAndFilter }) {
+    const isActive = sortAndFilter.sortBy === col;
+    const nextDir = isActive && sortAndFilter.sortDir === 'asc' ? 'desc' : 'asc';
+
+    return (
+        <button
+            type="button"
+            onClick={() =>
+                setSortAndFilter((current) => ({
+                    ...current,
+                    sortBy: col,
+                    sortDir: nextDir,
+                }))
+            }
+            className="inline-flex items-center gap-1 text-left text-xs font-semibold uppercase"
+        >
+            {title}
+            {isActive && <span>{sortAndFilter.sortDir === 'asc' ? '↑' : '↓'}</span>}
+        </button>
+    );
+}
 
 const Index = () => {
     const [data, setData] = useState([]);
