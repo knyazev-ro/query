@@ -118,6 +118,8 @@ Laravel передает датасеты внутри `model_version.datasets`.
 
 Для Docker-интеграции важно, что Laravel `local` disk хранит такие файлы в `storage/app/private`. Если в Python задан `IMG_COMPRESS_STORAGE_ROOT`, он должен указывать именно на этот корень, например `/web/service/storage/app/private`. Тогда `file_path = datasets/example.zip` резолвится как `/web/service/storage/app/private/datasets/example.zip`.
 
+Для PyTorch `DataLoader` с `num_workers > 0` контейнеру нужен увеличенный `/dev/shm`. В `ollsqueeze/docker-compose.yml` для `ml-api` должен быть задан `shm_size`, например `2gb`; иначе возможна ошибка `unable to allocate shared memory(shm)`.
+
 ## Изображения Для Сжатия
 
 Laravel передает изображения в `images[]`. Каждый image содержит обычные поля `ImgMedia` и дополнительное поле `file_base64`.
