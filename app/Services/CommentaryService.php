@@ -9,6 +9,7 @@ use App\DTO\Files;
 use App\Models\Commentary;
 use App\Utils\FileManager;
 use App\Utils\Helper;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\UploadedFile;
 
 class CommentaryService
@@ -33,6 +34,13 @@ class CommentaryService
 
     public function edit(int $commentary_id, CommentaryDTO $commentaryDto): Commentary {
         $commentary = Commentary::findOrFail($commentary_id);
+        if (
+            $commentary->master_type !== $commentaryDto->masterType ||
+            (int) $commentary->master_id !== (int) $commentaryDto->masterId
+        ) {
+            throw new AuthorizationException('You can edit only your own commentaries.');
+        }
+
         $masterIdFromDTO = $commentaryDto->masterId;
         $masterIdFromCommentary = $commentary->master_id;
         if ($masterIdFromDTO !== $masterIdFromCommentary && !Helper::isAdmin() && false) { // TODO false 

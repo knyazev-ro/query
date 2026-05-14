@@ -81,10 +81,13 @@ const Index = () => {
                     setSortAndFilter={setSortAndFilter}
                 />
             ),
-            cell: (value) => value.getValue().name + ' ' +  value.getValue().last_name
+            cell: (value) => {
+                const manager = value.getValue();
+                return [manager?.name, manager?.last_name].filter(Boolean).join(' ') || '—';
+            }
         },
         {
-            accessorKey: 'client',
+            accessorKey: 'client_name',
             header: (
                 <ColumnHeader
                     title="КЛИЕНТ"

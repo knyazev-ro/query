@@ -10,6 +10,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectFeedController;
+use App\Http\Controllers\StageController;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,8 +26,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
-Route::prefix('kanban')->name('kanban.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('kanban')->name('kanban.')->group(function () {
     Route::get('/', [PipelineController::class, 'kanban'])->name('index');
+    Route::get('/pipeline/{pipeline}', [PipelineController::class, 'kanban'])->name('show');
+    Route::post('/pipelines', [PipelineController::class, 'store'])->name('pipelines.store');
+    Route::post('/pipelines/{pipeline}', [PipelineController::class, 'update'])->name('pipelines.update');
+    Route::post('/pipelines/{pipeline}/stages', [StageController::class, 'store'])->name('stages.store');
+    Route::post('/stages/{stage}', [StageController::class, 'update'])->name('stages.update');
     Route::post('/drop/{project}/to/{stage}', [ProjectController::class, 'drop'])->name('drop');
 });
 
@@ -81,9 +87,12 @@ Route::prefix('graph')->name('graph.')->group(function () {
     Route::get('/', [GraphController::class, 'index'])->name('index');
 });
 
-Route::prefix('projects')->name('projects.')->group(function () {
+Route::middleware(['auth', 'verified'])->get('/users/paginated', [ProjectController::class, 'usersPaginated'])->name('users.paginated');
+Route::middleware(['auth', 'verified'])->get('/crm/pipelines', [PipelineController::class, 'paginated'])->name('api.crm.pipelines');
+
+Route::middleware(['auth', 'verified'])->prefix('projects')->name('projects.')->group(function () {
     Route::get('/', [ProjectController::class, 'index'])->name('index');
-    Route::get('/create', [ProjectController::class, 'create'])->name('create');
+    Route::get('/create/{stage?}', [ProjectController::class, 'create'])->name('create');
     Route::get('/show/{project}', [ProjectController::class, 'show'])->name('show');
     Route::post('/update/{id?}', [ProjectController::class, 'update'])->name('update');
     Route::post('/delete/{project?}', [ProjectController::class, 'destroy'])->name('delete');

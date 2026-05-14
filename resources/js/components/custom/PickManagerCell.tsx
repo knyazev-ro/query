@@ -38,7 +38,7 @@ export default function PickManagerCell({ data, handleEditDeal }) {
   const handleResponsibleChange = (selected) => {
     handleEditDeal({
       ...data,
-      manager_id: selected?.value ?? null,
+      author_id: selected?.value ?? null,
     });
   };
 

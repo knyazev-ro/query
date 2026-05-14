@@ -1,4 +1,5 @@
 import { useDroppable } from '@dnd-kit/core';
+import { router } from '@inertiajs/react';
 import { PlusCircleIcon } from 'lucide-react';
 import ProjectCard from './ProjectCard';
 import StageHeader from './StageHeader';
@@ -12,7 +13,7 @@ export default function Stage({ stage, isOver, idx }) {
     };
 
     const handleCreateNewProject = () => {
-        //
+        router.get(route('projects.create', stage.id), {}, { preserveScroll: true });
     };
 
     return (
@@ -25,7 +26,7 @@ export default function Stage({ stage, isOver, idx }) {
             <StageHeader stage={stage} idx={idx}/>
             <div className="space-y-3">
                 {stage?.projects?.map((project) => (
-                    <ProjectCard project={project} />
+                    <ProjectCard key={project.id} project={project} />
                 ))}
                 <button
                     onClick={() => handleCreateNewProject()}

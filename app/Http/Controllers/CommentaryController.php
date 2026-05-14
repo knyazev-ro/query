@@ -6,9 +6,11 @@ use App\DTO\CommentaryDTO;
 use App\DTO\Files;
 use App\Models\Commentary;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\CommentaryService;
-use GuzzleHttp\Psr7\UploadedFile;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 
 class CommentaryController extends Controller
@@ -33,10 +35,9 @@ class CommentaryController extends Controller
     public function store(Request $request, int $entityId)
     {
         $validated = $request->validate([
-            'content' => 'required|string',
-            'master_type' => 'nullable|string',
-            'master_id' => 'nullable|integer',
+            'content' => 'required|array',
             'files' => 'nullable|array',
+            'files.*' => 'nullable',
             'files.*.id' => 'nullable|integer',
             'files.*.toDelete' => 'nullable|boolean',
         ]);
@@ -45,10 +46,10 @@ class CommentaryController extends Controller
             $dto = new CommentaryDTO(
                 entityId: $entityId,
                 entityType: static::$entityModel,
-                masterId: $validated['master_id'] ?? null,
-                masterType: $validated['master_type'] ?? null,
+                masterId: Auth::id(),
+                masterType: User::class,
                 content: $validated['content'],
-                files: $validated['files'] ? collect($validated['files'])->map(function ($item) {
+                files: ($validated['files'] ?? null) ? collect($validated['files'])->map(function ($item) {
                     $fileDto = new Files(
                         id: $item['id'] ?? null,
                         file: ($item ?? null) instanceof UploadedFile ? $item : null,

@@ -3,55 +3,85 @@
 namespace Database\Seeders;
 
 use App\Models\Client;
-use Illuminate\Database\Seeder;
 use App\Models\Pipeline;
-use App\Models\Stage;
 use App\Models\Project;
+use App\Models\Stage;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        // Создаём несколько пайплайнов
-        $pipelines = [
-            'Web Development',
-            'Mobile Apps',
-            'Data Science',
+        $pipelinePresets = [
+            'Enterprise sales' => [
+                'Inbound lead',
+                'Discovery',
+                'Demo',
+                'Legal review',
+                'Closed won',
+            ],
+            'Implementation' => [
+                'Kickoff',
+                'Data import',
+                'Integration',
+                'Training',
+                'Go live',
+            ],
+            'Partner channel' => [
+                'New partner',
+                'Enablement',
+                'First deal',
+                'Co-marketing',
+                'Active',
+            ],
         ];
 
-        foreach ($pipelines as $pipelineName) {
+        $projectNames = [
+            'Northwind CRM rollout',
+            'Acme analytics cockpit',
+            'Retail image archive',
+            'Factory workflow upgrade',
+            'Partner portal launch',
+            'Customer success automation',
+            'Contract renewal sprint',
+            'Regional onboarding wave',
+        ];
+
+        foreach ($pipelinePresets as $pipelineName => $stageNames) {
             $pipeline = Pipeline::create([
                 'name' => $pipelineName,
+                'deadline' => now()->addDays(fake()->numberBetween(14, 90)),
             ]);
 
-            // Добавляем стадии для каждого пайплайна
-            $stages = [
-                ['name' => 'Planning', 'order' => 1],
-                ['name' => 'Development', 'order' => 2],
-                ['name' => 'Testing', 'order' => 3],
-                ['name' => 'Deployment', 'order' => 4],
-            ];
-
-            foreach ($stages as $stageData) {
+            foreach ($stageNames as $order => $stageName) {
                 $stage = Stage::create([
-                    'name' => $stageData['name'],
+                    'name' => $stageName,
                     'pipeline_id' => $pipeline->id,
-                    'order' => $stageData['order'],
+                    'order' => $order + 1,
                 ]);
 
-                // Создаём несколько проектов для стадии
-                for ($i = 1; $i <= 3; $i++) {
+                for ($i = 0; $i < 4; $i++) {
+                    $baseName = fake()->randomElement($projectNames);
+                    $amount = fake()->numberBetween(25, 450) * 1000;
+
                     Project::create([
-                        'name' => "{$pipelineName} Project {$i} ({$stageData['name']})",
-                        'description' => "Описание проекта {$i} на стадии {$stageData['name']}.",
-                        'author_id' => User::inRandomOrder()->value('id') ?? 1, // случайный пользователь или 1
+                        'name' => "{$baseName} #".fake()->unique()->numberBetween(100, 999),
+                        'description' => fake()->randomElement([
+                            'High-value deal with several stakeholders and a clear next action.',
+                            'Needs careful follow-up: budget is approved, timeline is still moving.',
+                            'Warm opportunity from an existing account, good expansion potential.',
+                            'Technical validation in progress, keep an eye on integration risks.',
+                        ]),
+                        'author_id' => User::inRandomOrder()->value('id') ?? 1,
                         'stage_id' => $stage->id,
-                        'stage_changed_at' => Carbon::now()->subDays(rand(1, 60)),
+                        'stage_changed_at' => Carbon::now()->subDays(fake()->numberBetween(1, 60)),
                         'level' => fake()->numberBetween(1, 5),
-                        'amount' => fake()->numberBetween(20 ,100000),
-                        'client_id' => Client::inRandomOrder()->first()->id ?? null,
+                        'amount' => $amount,
+                        'client_id' => Client::inRandomOrder()->value('id'),
+                        'created_at' => Carbon::now()->subDays(fake()->numberBetween(2, 90)),
+                        'updated_at' => Carbon::now()->subDays(fake()->numberBetween(0, 14)),
                     ]);
                 }
             }

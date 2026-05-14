@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Stage;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
@@ -50,14 +51,28 @@ class ProjectController extends Controller
             $projects = Project::with([
                 'stage',
                 'author',
-            ])->paginate(10);
+                'client.entity',
+            ])->paginate((int) $request->query('perPage', 10))
+                ->through(function (Project $project) {
+                    $clientEntity = $project->client?->entity;
+                    $project->setAttribute('manager', $project->author);
+                    $project->setAttribute('date', $project->created_at);
+                    $project->setAttribute('project_number', $project->id);
+                    $project->setAttribute('inn', $clientEntity?->inn);
+                    $project->setAttribute('client_name', $clientEntity?->name
+                        ?? trim(($clientEntity?->first_name ?? '').' '.($clientEntity?->last_name ?? '')));
+
+                    return $project;
+                });
             return $projects;
         }
         return Inertia::render('Projects/Index');
     }
 
-    public function create(Stage $stage)
+    public function create(?Stage $stage = null)
     {
+        $stage ??= Stage::query()->orderBy('order')->firstOrFail();
+
         $project = Project::create([
             'name' => 'New project',
             'description' => '',
@@ -91,6 +106,20 @@ class ProjectController extends Controller
         ], $validated);
 
         return Redirect::back()->with('message', 'Success!');
+    }
+
+    public function usersPaginated(Request $request)
+    {
+        return User::query()
+            ->when($request->string('search')->toString(), function ($query, string $search) {
+                $query
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
+            ->orderBy('last_name')
+            ->orderBy('name')
+            ->paginate((int) $request->query('per_page', 10));
     }
 
     public function destroy(Project $project)

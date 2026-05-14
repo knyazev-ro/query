@@ -12,110 +12,98 @@ import { useState } from 'react';
 import Files from './Files';
 import RichTextEditor from './RichTextEditor';
 
-export default function CommentaryBlock({ sendRoute }: { sendRoute: string }) {
-    const [isEnterOn, setIsEnterOn] = useState(false);
+const emptyComment = () => ({
+    content: { ops: [{ insert: '\n' }] },
+    marked_notify: null,
+    files: [],
+});
+
+export default function CommentaryBlock({
+    sendRoute,
+    onSaved,
+}: {
+    sendRoute: string;
+    onSaved?: () => void;
+}) {
     const [hotKey, setHotKey] = useState<string | null>(null);
+    const { data, setData, post, processing, reset } = useForm(emptyComment());
 
-    const { data, setData } = useForm({
-        content: [
-            {
-                type: 'paragraph',
-                children: [{ text: '' }],
-            },
-        ],
-        master_type: 'App\\Models\\User',
-        master_id: 1,
-        marked_notify: null,
-        files: [],
-    });
-
-    const handleClickVideoEmbed = () => {
-        setHotKey('mod+shift+v');
+    const triggerHotKey = (key: string) => {
+        setHotKey(key);
         setTimeout(() => setHotKey(null), 0);
     };
 
     const handleClickFileAttach = (files) => {
-        setData(
-            'files',
-            uniqBy([...data.files, ...files], (file) => file?.name),
-        );
+        setData('files', uniqBy([...data.files, ...Array.from(files ?? [])], (file) => file?.name));
     };
 
-    const handleClickBoldText = () => {
-        setHotKey('mod+b');
-        setTimeout(() => setHotKey(null), 0);
-    };
-
-    const handleClickMentionUser = () => {
-        setHotKey(null);
-        setTimeout(() => setHotKey(null), 0);
-    };
-
-    if (isEnterOn) {
-        router.post(sendRoute, data, {
+    const handleSubmit = () => {
+        post(sendRoute, {
+            forceFormData: true,
+            preserveScroll: true,
             onSuccess: () => {
-                setData({
-                    content: [
-                        {
-                            type: 'paragraph',
-                            children: [{ text: '' }],
-                        },
-                    ],
-                    files: [],
-                });
-            }
-        })
-        setIsEnterOn(false);
-    }
+                reset();
+                onSaved?.();
+            },
+        });
+    };
 
     return (
-        <div className="relative flex h-full min-h-11.5 w-full rounded-xs">
-            <div className="flex h-full flex-col px-2">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#81b64c] text-center">
-                    <StarIcon className="w-6 rotate-45 text-[#fcfff3]" />
+        <div className="relative flex h-full min-h-12 w-full gap-3 rounded-md">
+            <div className="flex h-full flex-col px-1">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#81b64c] text-center">
+                    <StarIcon className="w-5 rotate-45 text-[#fcfff3]" />
                 </div>
             </div>
-            <div className="flex h-full w-full flex-col">
-                <div className="flex h-full w-full items-center p-2">
+            <div className="flex h-full w-full min-w-0 flex-col">
+                <div className="flex h-full w-full items-center rounded-md bg-white/5 p-3">
                     <RichTextEditor
                         value={data.content}
-                        setValue={(e) => setData('content', e)}
+                        setValue={(value) => setData('content', value)}
                         hotKeyOutside={hotKey}
-                        setIsEnterOn={setIsEnterOn}
+                        setIsEnterOn={handleSubmit}
                     />
                 </div>
-                <Files
-                    files={data.files}
-                    setFiles={(f) => setData('files', f)}
-                />
+                <Files files={data.files} setFiles={(files) => setData('files', files)} />
             </div>
             <div className="flex h-full flex-col justify-end">
-                <div className="z-10 flex gap-6 px-4 py-4">
-                    <button className="flex cursor-pointer items-center justify-center rounded-full p-1 transition-all duration-300 hover:bg-[#ff1b1c]/30">
+                <div className="z-10 flex items-center gap-3 px-2 py-3">
+                    <button className="relative flex cursor-pointer items-center justify-center rounded-full p-1 transition-all duration-300 hover:bg-[#ff1b1c]/30">
                         <input
                             multiple
                             type="file"
-                            className="absolute z-10 h-7 w-7 rounded-full opacity-0"
-                            onChange={(e) =>
-                                handleClickFileAttach(e.target.files)
-                            }
-                        ></input>
+                            className="absolute z-10 h-7 w-7 cursor-pointer rounded-full opacity-0"
+                            onChange={(event) => handleClickFileAttach(event.target.files)}
+                        />
                         <PaperClipIcon className="w-5" />
                     </button>
                     <button
-                        onClick={() => handleClickVideoEmbed()}
+                        type="button"
+                        onClick={() => triggerHotKey('mod+shift+v')}
                         className="cursor-pointer rounded-full p-1 transition-all duration-300 hover:bg-[#ff1b1c]/30"
                     >
                         <PlayCircleIcon className="w-5" />
                     </button>
                     <button
-                        onClick={() => handleClickBoldText()}
+                        type="button"
+                        onClick={() => triggerHotKey('mod+b')}
                         className="cursor-pointer rounded-full p-1 transition-all duration-300 hover:bg-[#ff1b1c]/30"
                     >
                         <BoldIcon className="w-5" />
                     </button>
-                    <button className="transitio</button>n-all cursor-pointer rounded-full p-1 duration-300 hover:bg-[#ff1b1c]/30">
+                    <button
+                        type="button"
+                        className="cursor-pointer rounded-full p-1 transition-all duration-300 hover:bg-[#ff1b1c]/30"
+                    >
                         <AtSymbolIcon className="w-5" />
+                    </button>
+                    <button
+                        type="button"
+                        disabled={processing}
+                        onClick={handleSubmit}
+                        className="rounded-md bg-[#81b64c] px-3 py-1 text-sm font-semibold text-[#fcfff3] transition hover:bg-[#6fa13f] disabled:opacity-50"
+                    >
+                        Send
                     </button>
                 </div>
             </div>

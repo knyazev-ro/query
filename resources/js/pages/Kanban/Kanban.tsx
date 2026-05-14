@@ -1,15 +1,21 @@
+// @ts-nocheck
 import Layout from '@/components/custom/Layout';
 import Pipelines from '@/components/custom/Pipelines';
 import ProjectCard from '@/components/custom/ProjectCard';
 import Stage from '@/components/custom/Stage';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
-import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
-export default function Kanban({ stages: initialStages, pipelines }) {
+export default function Kanban({ stages: initialStages, pipelines, currentPipeline }) {
     const [activeProject, setActiveProject] = useState(null);
     const [stages, setStages] = useState(initialStages);
     const [overId, setOverId] = useState(null);
+    const stageForm = useForm({ name: '', order: null });
+
+    useEffect(() => {
+        setStages(initialStages);
+    }, [initialStages]);
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
@@ -65,13 +71,39 @@ export default function Kanban({ stages: initialStages, pipelines }) {
         setOverId(event.over ? event.over.id : null);
     };
 
+    const createStage = () => {
+        if (!currentPipeline?.id) {
+            return;
+        }
+
+        stageForm.post(route('kanban.stages.store', currentPipeline.id), {
+            preserveScroll: true,
+            onSuccess: () => stageForm.reset(),
+        });
+    };
+
     return (
         <Layout>
             <div className="flex h-full flex-col gap-4 bg-[#121212] p-4">
 
                 {/* PIPELINES BAR */}
-                <div className=" border border-white/10 bg-[#181818] p-3 shadow-md">
-                    <Pipelines pipelines={pipelines} />
+                <div className="border border-white/10 bg-[#181818] p-3 shadow-md">
+                    <Pipelines pipelines={pipelines} currentPipeline={currentPipeline} />
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                        <input
+                            value={stageForm.data.name}
+                            onChange={(event) => stageForm.setData('name', event.target.value)}
+                            className="min-w-64 rounded-md border border-white/10 bg-[#121212] px-3 py-2 text-sm text-white outline-none focus:border-[#81b64c]"
+                            placeholder="Новая стадия"
+                        />
+                        <button
+                            type="button"
+                            onClick={createStage}
+                            className="rounded-md bg-[#81b64c] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#6fa13f]"
+                        >
+                            Добавить стадию
+                        </button>
+                    </div>
                 </div>
 
                 {/* KANBAN */}

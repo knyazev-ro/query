@@ -10,24 +10,80 @@ use Inertia\Inertia;
 
 class PipelineController extends Controller
 {
-    public function kanban(int|null $pipeline_id=null)
+    public function kanban(?Pipeline $pipeline = null)
     {
-        $pipelines = Pipeline::all();
-        $pipeline = null;
-        if(!$pipeline_id) {
+        $pipelines = Pipeline::query()
+            ->withCount('stages')
+            ->orderBy('id')
+            ->get();
+
+        if(!$pipeline) {
             $pipeline = Pipeline::first();
             if(!$pipeline) {
-                return Redirect::route('home');
+                $pipeline = Pipeline::create(['name' => 'Sales pipeline']);
+                $pipeline->stages()->createMany([
+                    ['name' => 'New lead', 'order' => 1],
+                    ['name' => 'Qualification', 'order' => 2],
+                    ['name' => 'Proposal', 'order' => 3],
+                    ['name' => 'Won', 'order' => 4],
+                ]);
+                $pipelines = Pipeline::query()
+                    ->withCount('stages')
+                    ->orderBy('id')
+                    ->get();
             }
-
-        } else {
-            $pipeline = Pipeline::find($pipeline_id);
         }
+
         $stages = Stage::query()
             ->where('pipeline_id', $pipeline->id)
             ->with(['projects.author', 'pipeline'])
+            ->orderBy('order')
             ->get();
             
-        return Inertia::render('Kanban/Kanban', compact('pipelines', 'stages'));
+        return Inertia::render('Kanban/Kanban', [
+            'pipelines' => $pipelines,
+            'stages' => $stages,
+            'currentPipeline' => $pipeline,
+        ]);
+    }
+
+    public function paginated(Request $request)
+    {
+        return Pipeline::query()
+            ->with('stages')
+            ->when($request->string('search')->toString(), function ($query, string $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->paginate((int) $request->query('per_page', 10));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'deadline' => 'nullable|date',
+        ]);
+
+        $pipeline = Pipeline::create($validated);
+        $pipeline->stages()->createMany([
+            ['name' => 'New lead', 'order' => 1],
+            ['name' => 'In progress', 'order' => 2],
+            ['name' => 'Won', 'order' => 3],
+        ]);
+
+        return Redirect::route('kanban.show', $pipeline);
+    }
+
+    public function update(Request $request, Pipeline $pipeline)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'deadline' => 'nullable|date',
+        ]);
+
+        $pipeline->update($validated);
+
+        return Redirect::back();
     }
 }

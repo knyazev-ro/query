@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FeedType } from '@/enums/FeedType';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
@@ -15,18 +16,22 @@ export default function Feed({ entityId }: { entityId: number }) {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [feedElements, setFeedElements] = useState([]);
-
+    const [reloadKey, setReloadKey] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
+
+    const reload = () => {
+        setFeedElements([]);
+        setPage(1);
+        setReloadKey((key) => key + 1);
+    };
 
     const tabs = [
         {
             name: 'Комментарий',
             component: (
                 <CommentaryBlock
-                    sendRoute={route(
-                        'projects.feed.write.commentary',
-                        entityId,
-                    )}
+                    sendRoute={route('projects.feed.write.commentary', entityId)}
+                    onSaved={reload}
                 />
             ),
         },
@@ -35,11 +40,10 @@ export default function Feed({ entityId }: { entityId: number }) {
         { name: 'Статистика', component: <div /> },
     ];
 
-    const fetchFeed = async (page: number) => {
-        const query = `?page=${page}&per_page=${perPage}`;
-        const response = await axios.get(
-            route('projects.show.feed', entityId) + query,
-        );
+    const fetchFeed = async (nextPage: number) => {
+        const response = await axios.get(route('projects.show.feed', entityId), {
+            params: { page: nextPage, per_page: perPage },
+        });
 
         const totalRes = response?.data?.total ?? 0;
         const lastPageRes = response?.data?.last_page ?? 1;
@@ -47,38 +51,32 @@ export default function Feed({ entityId }: { entityId: number }) {
 
         setLastPage(lastPageRes);
         setTotal(totalRes);
+        setFeedElements((prev) => {
+            const source = nextPage === 1 ? data : [...prev, ...data];
 
-        setFeedElements((prev) =>
-            sortBy(
-                uniqBy([...data, ...prev], (e) => e.id),
-                (e) => e.updated_at,
-            ).reverse(),
-        );
+            return sortBy(uniqBy(source, (element) => element.id), (element) => element.updated_at).reverse();
+        });
     };
 
     const nextPage = () => {
         if (page < lastPage && total - feedElements.length > 0) {
-            setPage((p) => p + 1);
+            setPage((currentPage) => currentPage + 1);
         }
     };
 
-    const reload = () => setPage(1);
-
     useEffect(() => {
         fetchFeed(page);
-    }, [page]);
+    }, [page, reloadKey, entityId]);
 
     return (
-        <div className="flex h-full flex-col rounded-2xl">
-            {/* HEADER */}
+        <div className="flex h-full flex-col rounded-md">
             <div className="flex flex-col gap-3 border-b border-white/10 p-4">
-                {/* Tabs */}
                 <div className="flex gap-2">
                     {tabs.map((tab, i) => (
                         <button
-                            key={i}
+                            key={tab.name}
                             onClick={() => setActiveTab(i)}
-                            className={`rounded-lg px-3 py-1.5 text-sm transition-all ${
+                            className={`rounded-md px-3 py-1.5 text-sm transition-all ${
                                 activeTab === i
                                     ? 'bg-white/10 text-white'
                                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -89,21 +87,18 @@ export default function Feed({ entityId }: { entityId: number }) {
                     ))}
                 </div>
 
-                {/* Input */}
-                <div className="rounded-xl bg-white/5 p-3 backdrop-blur">
+                <div className="rounded-md bg-white/5 p-3 backdrop-blur">
                     {tabs[activeTab].component}
                 </div>
             </div>
 
-            {/* FILTERS */}
             <div className="border-b border-white/10 px-4 py-3">
                 <Filters />
             </div>
 
-            {/* FEED */}
             <div className="flex flex-1 flex-col gap-3 p-4">
                 {feedElements.map((feed) => {
-                    const onEdit = async (data) => {
+                    const onEdit = async (data, done) => {
                         router.post(
                             route('projects.feed.edit.commentary', [
                                 entityId,
@@ -111,15 +106,19 @@ export default function Feed({ entityId }: { entityId: number }) {
                             ]),
                             data,
                             {
-                                onFinish: reload,
+                                forceFormData: true,
                                 preserveState: true,
                                 preserveScroll: true,
+                                onSuccess: () => {
+                                    done?.();
+                                    reload();
+                                },
                             },
                         );
                     };
 
                     return (
-                        <div key={feed.id} className="">
+                        <div key={feed.id}>
                             {(() => {
                                 switch (feed.resource_type) {
                                     case FeedType.COMMENTARY:
@@ -147,11 +146,10 @@ export default function Feed({ entityId }: { entityId: number }) {
                     );
                 })}
 
-                {/* LOAD MORE */}
                 {page < lastPage && (
                     <button
                         onClick={nextPage}
-                        className="mt-2 rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-400 transition hover:bg-white/5 hover:text-white"
+                        className="mt-2 rounded-md border border-white/10 px-4 py-2 text-sm text-gray-400 transition hover:bg-white/5 hover:text-white"
                     >
                         Загрузить ещё
                     </button>

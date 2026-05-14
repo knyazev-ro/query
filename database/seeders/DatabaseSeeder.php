@@ -27,10 +27,25 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        collect([
+            ['name' => 'Mira', 'last_name' => 'Sales', 'email' => 'mira@example.com'],
+            ['name' => 'Leo', 'last_name' => 'Closer', 'email' => 'leo@example.com'],
+            ['name' => 'Nina', 'last_name' => 'Success', 'email' => 'nina@example.com'],
+            ['name' => 'Oleg', 'last_name' => 'Analyst', 'email' => 'oleg@example.com'],
+        ])->each(fn ($user) => User::firstOrCreate(
+            ['email' => $user['email']],
+            [
+                ...$user,
+                'password' => Hash::make('123'),
+                'email_verified_at' => now(),
+            ],
+        ));
+
         $this->call([
             ContactSeeder::class,
             ClientSeeder::class,
             ProjectSeeder::class,
+            CommentarySeeder::class,
         ]);
     }
 }

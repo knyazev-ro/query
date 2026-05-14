@@ -8,8 +8,10 @@ use App\Models\Feed;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\CommentaryService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 
 class FeedController extends Controller
@@ -23,22 +25,38 @@ class FeedController extends Controller
     {
         $perPage = $request->query('per_page', 10);
         return Feed::query()
-            ->with(['resource.fileLocations'])
+            ->with([
+                'resource' => function (MorphTo $morphTo) {
+                    $morphTo->morphWith([
+                        \App\Models\Commentary::class => ['fileLocations', 'master'],
+                    ]);
+                },
+            ])
+            ->where('master_id', $entityId)
+            ->where('master_type', static::$entityModel)
             ->whereHas('resource', function ($query) use ($entityId) {
-                return $query->where('entity_id', $entityId);
+                return $query
+                    ->where('entity_id', $entityId)
+                    ->where('entity_type', static::$entityModel);
             })
             ->orderBy('updated_at', 'desc')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->through(function (Feed $feed) {
+                if ($feed->resource instanceof \App\Models\Commentary) {
+                    $feed->resource->setAttribute('can_edit', $this->canEditCommentary($feed->resource));
+                }
+
+                return $feed;
+            });
     }
 
     public function writeCommentary(Request $request, $entityId)
     {
         $validated = $request->validate([
             'content' => 'required|array',
-            'master_type' => 'required|string',
-            'master_id' => 'required|integer',
             'marked_notify' => 'nullable|array',
             'files' => 'nullable|array',
+            'files.*' => 'nullable',
             'files.*.id' => 'nullable|integer',
             'files.*.toDelete' => 'nullable|boolean',
         ]);
@@ -47,10 +65,10 @@ class FeedController extends Controller
             $dto = new CommentaryDTO(
                 entityId: $entityId,
                 entityType: static::$entityModel,
-                masterId: $validated['master_id'] ?? null,
-                masterType: $validated['master_type'] ?? null,
+                masterId: Auth::id(),
+                masterType: User::class,
                 content: $validated['content'],
-                files: $validated['files'] ? collect($validated['files'])->map(function ($item) {
+                files: ($validated['files'] ?? null) ? collect($validated['files'])->map(function ($item) {
                     
                     if($item instanceof UploadedFile) {
                         return new Files(file: $item);
@@ -86,6 +104,7 @@ class FeedController extends Controller
             'content' => 'required|array',
             'marked_notify' => 'nullable|array',
             'files' => 'nullable|array',
+            'files.*' => 'nullable',
             'files.*.id' => 'nullable|integer',
             'files.*.toDelete' => 'nullable|boolean',
         ]);
@@ -94,10 +113,10 @@ class FeedController extends Controller
             $dto = new CommentaryDTO(
                 entityId: $entityId,
                 entityType: static::$entityModel,
-                masterId: $validated['master_id'] ?? null,
-                masterType: $validated['master_type'] ?? null,
+                masterId: Auth::id(),
+                masterType: User::class,
                 content: $validated['content'],
-                files: $validated['files'] ? collect($validated['files'])->map(function ($item) {
+                files: ($validated['files'] ?? null) ? collect($validated['files'])->map(function ($item) {
                     $fileDto = new Files(
                         id: $item['id'] ?? null,
                         file: ($item ?? null) instanceof UploadedFile ? $item : null,
@@ -113,6 +132,12 @@ class FeedController extends Controller
         } catch (\Exception $e) {
             return Redirect::back()->withErrors('Failed to store commentary: ' . $e->getMessage());
         }
+    }
+
+    protected function canEditCommentary(\App\Models\Commentary $commentary): bool
+    {
+        return $commentary->master_type === User::class
+            && (int) $commentary->master_id === (int) Auth::id();
     }
 
 

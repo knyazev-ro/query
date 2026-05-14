@@ -1,311 +1,75 @@
-import imageExtensions from 'image-extensions';
-import isHotkey from 'is-hotkey';
-import isUrl from 'is-url';
-import React, { KeyboardEvent, useCallback, useEffect, useMemo } from 'react';
-import { createEditor, Editor, Transforms } from 'slate';
-import { withHistory } from 'slate-history';
-import {
-    Editable,
-    RenderElementProps,
-    RenderLeafProps,
-    Slate,
-    withReact,
-} from 'slate-react';
-import {
-    CustomEditor,
-    CustomElement,
-    CustomElementWithAlign,
-    CustomTextKey,
-    ImageElement,
-    ParagraphElement,
-    RenderElementPropsFor,
-    VideoElement as VideoElementType,
-} from './custom-types.d';
+// @ts-nocheck
+import { useEffect, useMemo, useRef } from 'react';
 
-const TEXT_ALIGN_TYPES = ['left', 'center', 'right', 'justify'] as const;
-type AlignType = (typeof TEXT_ALIGN_TYPES)[number];
-
-const HOTKEYS: Record<string, CustomTextKey> = {
-    'mod+b': 'bold',
-    'mod+i': 'italic',
-    'mod+u': 'underline',
-    'mod+`': 'code',
+type QuillDelta = {
+    ops: Array<Record<string, unknown>>;
 };
 
-const HOTKEYS_EMBED = {
-    'mod+shift+v': 'video',
+const EMPTY_DELTA: QuillDelta = { ops: [{ insert: '\n' }] };
+
+const isQuillDelta = (value: unknown): value is QuillDelta => {
+    return !!value && typeof value === 'object' && Array.isArray(value.ops);
+};
+
+const slateToText = (nodes: unknown): string => {
+    if (!Array.isArray(nodes)) {
+        return '';
+    }
+
+    return nodes
+        .map((node) => {
+            if (typeof node?.text === 'string') {
+                return node.text;
+            }
+
+            if (Array.isArray(node?.children)) {
+                return slateToText(node.children);
+            }
+
+            return '';
+        })
+        .filter(Boolean)
+        .join('\n');
+};
+
+const normalizeDelta = (value: unknown): QuillDelta => {
+    if (isQuillDelta(value)) {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        const text = slateToText(value).trim();
+
+        return text ? { ops: [{ insert: `${text}\n` }] } : EMPTY_DELTA;
+    }
+
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            if (isQuillDelta(parsed)) {
+                return parsed;
+            }
+        } catch {
+            return value.trim()
+                ? { ops: [{ insert: `${value.trim()}\n` }] }
+                : EMPTY_DELTA;
+        }
+    }
+
+    return EMPTY_DELTA;
 };
 
 const getSafeUrl = (url: string) => {
-    let parsedUrl: URL | null = null;
     try {
-        parsedUrl = new URL(url);
-        // eslint-disable-next-line no-empty
-    } catch {}
-    if (parsedUrl && allowedSchemes.includes(parsedUrl.protocol)) {
-        return parsedUrl.href;
-    }
-    return 'about:blank';
-};
-
-const isMarkActive = (editor: CustomEditor, format: CustomTextKey) => {
-    const marks = Editor.marks(editor);
-    return marks ? marks[format] === true : false;
-};
-
-const toggleMark = (editor: CustomEditor, format: CustomTextKey) => {
-    const isActive = isMarkActive(editor, format);
-
-    if (isActive) {
-        Editor.removeMark(editor, format);
-    } else {
-        Editor.addMark(editor, format, true);
-    }
-};
-
-const insertImage = (editor: CustomEditor, url: string) => {
-    const text = { text: '' };
-    const image: ImageElement = { type: 'image', url, children: [text] };
-    Transforms.insertNodes(editor, image);
-    const paragraph: ParagraphElement = {
-        type: 'paragraph',
-        children: [{ text: '' }],
-    };
-    Transforms.insertNodes(editor, paragraph);
-};
-
-const insertVideo = (editor: CustomEditor, url: string) => {
-    const text = { text: '' };
-    const image: VideoElementType = { type: 'video', url, children: [text] };
-    Transforms.insertNodes(editor, image);
-    const paragraph: ParagraphElement = {
-        type: 'paragraph',
-        children: [{ text: url }],
-    };
-    Transforms.insertNodes(editor, paragraph);
-};
-
-const isImageUrl = (url: string): boolean => {
-    if (!url) return false;
-    if (!isUrl(url)) return false;
-    const ext = new URL(url).pathname.split('.').pop();
-    return imageExtensions.includes(ext!);
-};
-
-const compressImage = (base64: string, scale = 0.5): Promise<string> => {
-    return new Promise((resolve) => {
-        const img = new window.Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-
-            const ctx = canvas.getContext('2d');
-            ctx!.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-            // качество по желанию (для jpeg), для png игнорируется
-            const compressed = canvas.toDataURL('image/png', 0.8);
-
-            resolve(compressed);
-        };
-        img.src = base64;
-    });
-};
-
-const withImages = (editor: CustomEditor) => {
-    const { insertData, isVoid } = editor;
-
-    editor.isVoid = (element) => {
-        return element.type === 'image' ? true : isVoid(element);
-    };
-
-    editor.insertData = (data) => {
-        const text = data.getData('text/plain');
-        const { files } = data;
-
-        if (files && files.length > 0) {
-            Array.from(files).forEach((file) => {
-                const reader = new FileReader();
-                const [mime] = file.type.split('/');
-
-                if (mime === 'image') {
-                    reader.addEventListener('load', async () => {
-                        const base64 = reader.result as string;
-                        const compressed = await compressImage(base64, 0.5);
-                        insertImage(editor, compressed);
-                    });
-
-                    reader.readAsDataURL(file);
-                }
-            });
-        } else if (isImageUrl(text)) {
-            insertImage(editor, text);
-        } else {
-            insertData(data);
+        const parsedUrl = new URL(url);
+        if (['http:', 'https:'].includes(parsedUrl.protocol)) {
+            return parsedUrl.href;
         }
-    };
-
-    return editor;
-};
-
-const withEmbeds = (editor: CustomEditor) => {
-    const { isVoid, insertData } = editor;
-    editor.isVoid = (element) =>
-        element.type === 'video' ? true : isVoid(element);
-
-    editor.insertData = (data) => {
-        let text = data.getData('text/plain');
-        text = text.trim();
-        const url = getSafeUrl(text);
-        if (url !== 'about:blank') {
-            insertVideo(editor, url);
-            return;
-        }
-
-        insertData(data);
-        return;
-    };
-    return editor;
-};
-
-const allowedSchemes = ['http:', 'https:'];
-
-const VideoElement = ({
-    attributes,
-    children,
-    element,
-}: RenderElementPropsFor<VideoElementType>) => {
-    const { url } = element;
-
-    const safeUrl = useMemo(() => getSafeUrl(url), [url]);
-
-    return (
-        <div {...attributes}>
-            <div contentEditable={false}>
-                <div className="p-2">
-                    <iframe
-                        src={`${safeUrl}?title=0&byline=0&portrait=0`}
-                        frameBorder="0"
-                        className="z-10 h-screen w-full"
-                    />
-                </div>
-            </div>
-            {children}
-        </div>
-    );
-};
-
-const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
-    if (leaf.bold) {
-        children = <strong>{children}</strong>;
+    } catch {
+        return null;
     }
 
-    if (leaf.code) {
-        children = <code>{children}</code>;
-    }
-
-    if (leaf.italic) {
-        children = <em>{children}</em>;
-    }
-
-    if (leaf.underline) {
-        children = <u>{children}</u>;
-    }
-
-    return <span {...attributes}>{children}</span>;
-};
-
-const isAlignElement = (
-    element: CustomElement,
-): element is CustomElementWithAlign => {
-    return 'align' in element;
-};
-
-const Image = ({
-    attributes,
-    children,
-    element,
-}: RenderElementPropsFor<ImageElement>) => {
-    console.log(element.url);
-    return (
-        <div {...attributes}>
-            {children}
-            <div contentEditable={false}>
-                <img src={element.url} className="block max-h-96 max-w-full" />
-            </div>
-        </div>
-    );
-};
-
-const Element = (props: RenderElementProps) => {
-    const { attributes, children, element } = props;
-    const style: React.CSSProperties = {};
-    if (isAlignElement(element)) {
-        style.textAlign = element.align as AlignType;
-    }
-
-    switch (element.type) {
-        case 'block-quote':
-            return (
-                <blockquote style={style} {...attributes}>
-                    {children}
-                </blockquote>
-            );
-        case 'bulleted-list':
-            return (
-                <ul style={style} {...attributes}>
-                    {children}
-                </ul>
-            );
-        case 'heading-one':
-            return (
-                <h1 style={style} {...attributes}>
-                    {children}
-                </h1>
-            );
-        case 'heading-two':
-            return (
-                <h2 style={style} {...attributes}>
-                    {children}
-                </h2>
-            );
-        case 'list-item':
-            return (
-                <li style={style} {...attributes}>
-                    {children}
-                </li>
-            );
-        case 'numbered-list':
-            return (
-                <ol style={style} {...attributes}>
-                    {children}
-                </ol>
-            );
-        case 'image':
-            return <Image {...props} />;
-        case 'video':
-            return <VideoElement {...props} />;
-        default:
-            return (
-                <p style={style} {...attributes}>
-                    {children}
-                </p>
-            );
-    }
-};
-
-const handleToolbarClick = (editor, hotkey: string) => {
-    const embedType = HOTKEYS_EMBED[hotkey];
-    if (embedType === 'video' && editor?.selection) {
-        const url = getSafeUrl(Editor.string(editor, editor.selection));
-        console.log('URL:', url);
-        if (url !== 'about:blank') {
-            insertVideo(editor, url);
-        }
-    } else if (HOTKEYS[hotkey] === 'bold') {
-        const mark = HOTKEYS[hotkey];
-        toggleMark(editor, mark);
-    }
+    return null;
 };
 
 export default function RichTextEditor({
@@ -313,69 +77,124 @@ export default function RichTextEditor({
     setValue,
     hotKeyOutside,
     setIsEnterOn,
+    readOnly = false,
+    placeholder = 'Введите комментарий...',
 }) {
-    const renderElement = useCallback(
-        (props: RenderElementProps) => <Element {...props} />,
-        [],
-    );
-    const renderLeaf = useCallback(
-        (props: RenderLeafProps) => <Leaf {...props} />,
-        [],
-    );
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const editorRef = useRef<any | null>(null);
+    const lastDeltaRef = useRef('');
+    const normalizedValue = useMemo(() => normalizeDelta(value), [value]);
 
-    const editor = useMemo(
-        () => withEmbeds(withImages(withHistory(withReact(createEditor())))),
-        [],
-    );
     useEffect(() => {
-        if (hotKeyOutside) {
-            handleToolbarClick(editor, hotKeyOutside);
+        if (!containerRef.current || editorRef.current) {
+            return;
+        }
+
+        let cancelled = false;
+
+        import('quill').then(({ default: Quill }) => {
+            if (cancelled || !containerRef.current || editorRef.current) {
+                return;
+            }
+
+            const editor = new Quill(containerRef.current, {
+            theme: 'snow',
+            readOnly,
+            placeholder,
+            modules: {
+                toolbar: false,
+                keyboard: {
+                    bindings: {
+                        submit: {
+                            key: 'Enter',
+                            shiftKey: true,
+                            handler: () => {
+                                setIsEnterOn?.(true);
+                                return false;
+                            },
+                        },
+                    },
+                },
+            },
+            });
+
+            editor.setContents(normalizedValue);
+            lastDeltaRef.current = JSON.stringify(editor.getContents());
+
+            editor.on('text-change', () => {
+                const nextValue = editor.getContents();
+                lastDeltaRef.current = JSON.stringify(nextValue);
+                setValue?.(nextValue);
+            });
+
+            editorRef.current = editor;
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+
+        editor.enable(!readOnly);
+    }, [readOnly]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+
+        const next = normalizeDelta(value);
+        const nextSerialized = JSON.stringify(next);
+
+        if (nextSerialized !== lastDeltaRef.current) {
+            const selection = editor.getSelection();
+            editor.setContents(next);
+            lastDeltaRef.current = nextSerialized;
+            if (selection && !readOnly) {
+                editor.setSelection(selection);
+            }
+        }
+    }, [value, readOnly]);
+
+    useEffect(() => {
+        const editor = editorRef.current;
+        if (!editor || !hotKeyOutside) {
+            return;
+        }
+
+        if (hotKeyOutside === 'mod+b') {
+            const current = editor.getFormat();
+            editor.format('bold', !current.bold);
+        }
+
+        if (hotKeyOutside === 'mod+shift+v') {
+            const selection = editor.getSelection();
+            if (!selection) {
+                return;
+            }
+
+            const selectedText = editor.getText(selection.index, selection.length).trim();
+            const safeUrl = getSafeUrl(selectedText);
+            if (safeUrl) {
+                editor.deleteText(selection.index, selection.length);
+                editor.insertEmbed(selection.index, 'video', safeUrl);
+                editor.insertText(selection.index + 1, '\n');
+            }
         }
     }, [hotKeyOutside]);
 
     return (
-        <Slate editor={editor} onValueChange={setValue} initialValue={value}>
-            <Editable
-                renderElement={renderElement}
-                renderLeaf={renderLeaf}
-                placeholder="Введите комментарий..."
-                spellCheck
-                autoFocus
-                className="focus:ring-none w-full resize-none font-medium break-words break-all transition-all outline-none focus:border-none focus:outline-none"
-                onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
-                    if (isHotkey('shift+enter', event as any)) {
-                        setIsEnterOn(true);
-                        Transforms.delete(editor, {
-                            at: {
-                                anchor: Editor.start(editor, []),
-                                focus: Editor.end(editor, []),
-                            },
-                        });
-                    }
-
-                    for (const hotkey in HOTKEYS) {
-                        if (isHotkey(hotkey, event as any)) {
-                            event.preventDefault();
-                            const mark = HOTKEYS[hotkey];
-                            toggleMark(editor, mark);
-                        }
-                    }
-                    for (const hotkey in HOTKEYS_EMBED) {
-                        if (isHotkey(hotkey, event as any)) {
-                            event.preventDefault();
-                            const embedType = HOTKEYS_EMBED[hotkey];
-                            if (embedType === 'video' && editor?.selection) {
-                                const url = getSafeUrl(
-                                    Editor.string(editor, editor.selection),
-                                );
-                                if (url !== 'about:blank') {
-                                    insertVideo(editor, url);
-                                }
-                            }
-                        }
-                    }
-                }}
-            />
-        </Slate>
+        <div
+            className={`quill-commentary w-full ${readOnly ? 'quill-commentary-readonly' : ''}`}
+        >
+            <div ref={containerRef} />
+        </div>
     );
 }

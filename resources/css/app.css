@@ -151,3 +151,32 @@
     0 100%      /* нижняя левая точка */
   );
 }
+
+.quill-commentary .ql-container {
+    border: 0;
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.925rem;
+}
+
+.quill-commentary .ql-editor {
+    min-height: 44px;
+    padding: 0;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.quill-commentary .ql-editor.ql-blank::before {
+    left: 0;
+    right: auto;
+    color: rgb(156 163 175);
+    font-style: normal;
+}
+
+.quill-commentary-readonly .ql-editor {
+    min-height: 0;
+}
+
+.quill-commentary-readonly .ql-editor.ql-blank::before {
+    display: none;
+}
