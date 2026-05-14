@@ -79,6 +79,17 @@
 
 Если `parent_version_id` не `null`, микросервис должен уметь продолжить обучение от артефакта родительской версии. Если родительского артефакта нет, это ошибка обучения.
 
+## Гиперпараметры Обучения
+
+Для соответствия `ollsqueeze/AGAN.ipynb` используются такие значения:
+
+- `IMG_COMPRESS_TRAIN_EPOCHS=250`
+- `IMG_COMPRESS_TRAIN_BATCH_SIZE=32`
+- `IMG_COMPRESS_TRAIN_NUM_WORKERS=4`
+- `IMG_COMPRESS_TRAIN_LEARNING_RATE=1e-3`
+- `IMG_COMPRESS_DISCRIMINATOR_LEARNING_RATE=1e-5`
+- `IMG_COMPRESS_ADVERSARIAL_BETA=0.05`
+
 ## Датасеты
 
 Laravel передает датасеты внутри `model_version.datasets`. Каждый dataset содержит обычные поля модели. Главное поле для микросервиса - `file_path`: это путь к ZIP-архиву датасета в Laravel Storage.
@@ -275,6 +286,7 @@ Behavior:
 - Для каждого изображения нужно отправлять отдельный callback в Laravel.
 - При успешном сжатии микросервис должен сохранить сжатый артефакт в путь, доступный Laravel Storage, или вернуть путь, который Laravel сможет прочитать.
 - Текущий Laravel callback ожидает `compressed_path`, а не сам base64 результата.
+- Текущий компактный формат артефакта: `latent-q4-symmetric-v2`. Latent квантуется per-channel в signed 4-bit, два значения пакуются в один `uint8`, рядом хранятся `float16` scale по каналам и исходная shape. Старые `.npz` с float16 ключом `latent` должны оставаться читаемыми для backward compatibility.
 
 Важное место для согласования при реализации: так как микросервис отдельный, нужно решить, как он пишет результат в Laravel Storage. Варианты:
 
@@ -548,6 +560,10 @@ ml/compressed/img-media-10/compressed.npz
 - `parent_version_id`;
 - `image_resolution`;
 - `latent_shape`;
+- `format`: например `latent-q4-symmetric-v2`;
+- `quantization`: например `per-channel symmetric int4`;
+- `packed_size`;
+- `scale_size`;
 - `created_at`;
 - `torch_version`;
 - `normalization`;

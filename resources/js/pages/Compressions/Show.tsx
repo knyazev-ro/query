@@ -156,34 +156,52 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                         <div className="rounded-lg border border-white/10 bg-[#141414]">
                             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                                 <div className="text-xs font-medium text-gray-400">
-                                    Compressed
+                                    Decompressed
                                 </div>
                                 {imgMedia.compressed_img_path && (
-                                    <a
-                                        href={route(
-                                            'compressions.compressed',
-                                            imgMedia.id,
+                                    <div className="flex items-center gap-2">
+                                        <a
+                                            href={route(
+                                                'compressions.compressed',
+                                                imgMedia.id,
+                                            )}
+                                            className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                                            title="Download compressed artifact"
+                                        >
+                                            <ArrowDownTrayIcon className="h-4 w-4" />
+                                        </a>
+
+                                        {imgMedia.status === 'compressed' && (
+                                            <a
+                                                href={route(
+                                                    'compressions.decompressed',
+                                                    {
+                                                        imgMedia: imgMedia.id,
+                                                        download: 1,
+                                                    },
+                                                )}
+                                                className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-400 transition hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                                title="Download decompressed"
+                                            >
+                                                <ArrowDownTrayIcon className="h-4 w-4" />
+                                            </a>
                                         )}
-                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-400 transition hover:bg-white/5 hover:text-white"
-                                        title="Download compressed"
-                                    >
-                                        <ArrowDownTrayIcon className="h-4 w-4" />
-                                    </a>
+                                    </div>
                                 )}
                             </div>
                             <div className="flex min-h-[420px] items-center justify-center bg-[#101010]">
-                                {imgMedia.compressed_img_path ? (
+                                {imgMedia.status === 'compressed' ? (
                                     <img
                                         src={route(
-                                            'compressions.compressed',
+                                            'compressions.decompressed',
                                             imgMedia.id,
                                         )}
-                                        alt={`${imgMedia.original_name} compressed`}
+                                        alt={`${imgMedia.original_name} decompressed`}
                                         className="max-h-[70vh] max-w-full object-contain"
                                     />
                                 ) : (
                                     <div className="px-6 text-center text-sm text-gray-500">
-                                        Compressed file is not available yet
+                                        Decompressed preview is not available yet
                                     </div>
                                 )}
                             </div>

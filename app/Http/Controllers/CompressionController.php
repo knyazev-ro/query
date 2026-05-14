@@ -6,6 +6,7 @@ use App\Jobs\CompressJob;
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
 use App\Services\MLConnector;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -66,6 +67,38 @@ class CompressionController extends Controller
         abort_if($imgMedia->compressed_img_path === null || ! Storage::exists($imgMedia->compressed_img_path), 404);
 
         return Storage::response($imgMedia->compressed_img_path, $imgMedia->original_name);
+    }
+
+    public function decompressed(Request $request, ImgMedia $imgMedia, MLConnector $mlConnector)
+    {
+        $this->authorizeImage($imgMedia);
+
+        abort_if($imgMedia->status !== 'compressed', 404);
+        abort_if($imgMedia->modelVersion === null, 404);
+        abort_if($imgMedia->compressed_img_path === null || ! Storage::exists($imgMedia->compressed_img_path), 404);
+
+        $result = $mlConnector->decompress(
+            $imgMedia->modelVersion,
+            new EloquentCollection([$imgMedia]),
+        );
+
+        $image = $result['images'][0] ?? null;
+        abort_if(! is_array($image) || empty($image['file_base64']), 502);
+
+        $bytes = base64_decode($image['file_base64'], true);
+        abort_if($bytes === false, 502);
+
+        $mimeType = $image['mime_type'] ?? 'image/png';
+        $baseName = pathinfo($imgMedia->original_name, PATHINFO_FILENAME) ?: 'image';
+        $filename = str_replace('"', '', $baseName).'-decompressed.png';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($bytes, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Length' => (string) strlen($bytes),
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store',
+        ]);
     }
 
     public function store(Request $request)

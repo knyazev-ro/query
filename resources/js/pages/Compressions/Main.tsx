@@ -1,5 +1,6 @@
 import Layout from '@/components/custom/Layout';
 import {
+    ArrowDownTrayIcon,
     ArrowPathIcon,
     EyeIcon,
     PlusIcon,
@@ -227,6 +228,24 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
                                                             <ArrowPathIcon className="h-4 w-4" />
                                                         )}
                                                     </button>
+                                                )}
+
+                                                {image.status ===
+                                                    'compressed' && (
+                                                    <a
+                                                        href={route(
+                                                            'compressions.decompressed',
+                                                            {
+                                                                imgMedia:
+                                                                    image.id,
+                                                                download: 1,
+                                                            },
+                                                        )}
+                                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-400 transition hover:border-emerald-500/50 hover:bg-emerald-500/10 hover:text-emerald-300"
+                                                        title="Download decompressed"
+                                                    >
+                                                        <ArrowDownTrayIcon className="h-4 w-4" />
+                                                    </a>
                                                 )}
 
                                                 <button
