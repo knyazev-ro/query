@@ -129,6 +129,7 @@ export default function Kanban({ stages: initialStages, pipelines, currentPipeli
                                         stage={stage}
                                         isOver={stage.id === overId}
                                         idx={idx}
+                                        totalStages={stages.length}
                                     />
                                 </div>
                             ))}

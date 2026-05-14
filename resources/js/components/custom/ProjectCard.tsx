@@ -1,12 +1,41 @@
+// @ts-nocheck
 import { useDraggable } from '@dnd-kit/core';
 import {
     BriefcaseIcon,
     ChatBubbleOvalLeftEllipsisIcon,
     CurrencyYenIcon,
-    EllipsisVerticalIcon,
+    UserCircleIcon,
 } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
 import Levels from './Levels';
+
+const formatMoney = (amount) => {
+    if (!amount) {
+        return '—';
+    }
+
+    return new Intl.NumberFormat('ru-RU', {
+        maximumFractionDigits: 0,
+    }).format(Number(amount));
+};
+
+const clientName = (client) => {
+    const entity = client?.entity;
+
+    if (!entity) {
+        return 'Без клиента';
+    }
+
+    return entity.name || [entity.first_name, entity.last_name].filter(Boolean).join(' ');
+};
+
+const authorName = (author) => {
+    if (!author) {
+        return 'Не назначен';
+    }
+
+    return [author.name, author.last_name].filter(Boolean).join(' ') || author.email;
+};
 
 export default function ProjectCard({ project }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -25,9 +54,7 @@ export default function ProjectCard({ project }) {
         router.get(route('projects.show', project.id));
     };
 
-    const images = [
-        'https://t3.ftcdn.net/jpg/16/81/25/58/360_F_1681255802_3JLKAyEmo93FKXX3rEoIGJ4cHzQkRRFU.jpg',
-    ];
+    const commentsCount = project.commentaries_count ?? 0;
 
     return (
         <div
@@ -36,32 +63,20 @@ export default function ProjectCard({ project }) {
             {...listeners}
             {...attributes}
             className={`
-                group relative flex flex-col gap-2
-                rounded-xl border border-white/10
-                bg-[#1c1c1c] p-2
+                group relative flex flex-col gap-3
+                rounded-md border border-white/10
+                bg-[#1c1c1c] p-3
                 shadow-md transition-all duration-200
                 hover:bg-[#222] hover:shadow-lg
                 ${isDragging ? 'opacity-0' : 'opacity-100'}
             `}
         >
-            {/* IMAGE */}
-            {images.length > 0 && (
-                <div className="overflow-hidden rounded-lg">
-                    <img
-                        className="h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                        src={images[0]}
-                    />
-                </div>
-            )}
-
-            {/* HEADER */}
-            <div className="flex items-start justify-between gap-2 px-1">
-
+            <div className="flex items-start justify-between gap-2">
                 <button
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
                     onClick={handleShowProject}
-                    className="text-left text-sm font-medium text-white hover:underline"
+                    className="line-clamp-2 text-left text-sm font-semibold text-white hover:underline"
                 >
                     {project.name}
                 </button>
@@ -69,49 +84,33 @@ export default function ProjectCard({ project }) {
                 <Levels level={project.level} size={2} />
             </div>
 
-            {/* DESCRIPTION */}
             {project.description && (
-                <div className="px-1 text-xs text-gray-400 line-clamp-2">
+                <div className="text-xs text-gray-400 line-clamp-2">
                     {project.description}
                 </div>
             )}
 
-            {/* META */}
-            <div className="flex items-center justify-between px-1 text-[11px] text-gray-500">
+            <div className="grid gap-2 text-[11px] text-gray-400">
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <UserCircleIcon className="w-4 shrink-0 opacity-70" />
+                    <span className="truncate">{authorName(project.author)}</span>
+                </div>
 
-                <span className="truncate">
-                    {project?.author?.name || '—'}
-                </span>
-
-                <span className="opacity-60">
-                    {new Date(project.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <BriefcaseIcon className="w-4 shrink-0 opacity-70" />
+                    <span className="truncate">{clientName(project.client)}</span>
+                </div>
             </div>
 
-            {/* FOOTER */}
-            <div className="flex items-center justify-between border-t border-white/5 pt-2 px-1 text-xs">
-
-                {/* AMOUNT */}
-                <div className="flex items-center gap-1 text-gray-300">
-                    <CurrencyYenIcon className="w-4 opacity-70" />
-                    <span>{project.amount || '—'}</span>
+            <div className="flex items-center justify-between border-t border-white/5 pt-2 text-xs">
+                <div className="flex min-w-0 items-center gap-1 text-gray-300">
+                    <CurrencyYenIcon className="w-4 shrink-0 opacity-70" />
+                    <span className="truncate">{formatMoney(project.amount)}</span>
                 </div>
 
-                {/* COMPANY */}
-                <div className="flex items-center gap-1 text-gray-400 truncate">
-                    <BriefcaseIcon className="w-4 opacity-60" />
-                    <span className="truncate max-w-[80px]">
-                        OOO Ростсельмаш
-                    </span>
-                </div>
-
-                {/* COMMENTS */}
-                <div className="relative flex items-center gap-1 text-gray-400">
+                <div className="flex items-center gap-1 text-gray-400">
                     <ChatBubbleOvalLeftEllipsisIcon className="w-4" />
-
-                    <div className="absolute -top-1 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] text-white">
-                        2
-                    </div>
+                    <span className="min-w-4 text-right">{commentsCount}</span>
                 </div>
             </div>
         </div>

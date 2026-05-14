@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pipeline;
 use App\Models\Stage;
+use App\Models\Commentary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
@@ -36,7 +37,19 @@ class PipelineController extends Controller
 
         $stages = Stage::query()
             ->where('pipeline_id', $pipeline->id)
-            ->with(['projects.author', 'pipeline'])
+            ->with([
+                'pipeline',
+                'projects' => function ($query) {
+                    $query
+                        ->with(['author', 'client.entity'])
+                        ->withCount([
+                            'feedMaster as commentaries_count' => function ($query) {
+                                $query->where('resource_type', Commentary::class);
+                            },
+                        ])
+                        ->latest('updated_at');
+                },
+            ])
             ->orderBy('order')
             ->get();
             

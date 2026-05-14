@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->prefix('kanban')->name('kanban.')->grou
     Route::post('/pipelines/{pipeline}', [PipelineController::class, 'update'])->name('pipelines.update');
     Route::post('/pipelines/{pipeline}/stages', [StageController::class, 'store'])->name('stages.store');
     Route::post('/stages/{stage}', [StageController::class, 'update'])->name('stages.update');
+    Route::post('/stages/{stage}/move/{direction}', [StageController::class, 'move'])->name('stages.move');
     Route::post('/drop/{project}/to/{stage}', [ProjectController::class, 'drop'])->name('drop');
 });
 

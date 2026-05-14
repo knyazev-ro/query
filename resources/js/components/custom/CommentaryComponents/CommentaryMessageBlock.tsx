@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/react';
 import { HeartIcon } from 'lucide-react';
 import { useState } from 'react';
 import Files from './Files';
+import QuillDeltaView from './QuillDeltaView';
 import RichTextEditor from './RichTextEditor';
 
 const normalizeContent = (content) => {
@@ -55,14 +56,17 @@ export default function CommentaryMessageBlock({ commentary, onEdit }) {
                     {new Date(commentary?.updated_at ?? commentary?.created_at).toLocaleString()}
                 </div>
                 <div className="mt-4 flex flex-col gap-2">
-                    <div className="rounded-md bg-white/5 p-3">
-                        <RichTextEditor
-                            value={data.content}
-                            setValue={(value) => setData('content', value)}
-                            hotKeyOutside={hotKey}
-                            setIsEnterOn={handleSave}
-                            readOnly={!isEditing}
-                        />
+                    <div className="rounded-md bg-white/5 p-3 text-gray-100">
+                        {isEditing ? (
+                            <RichTextEditor
+                                value={data.content}
+                                setValue={(value) => setData('content', value)}
+                                hotKeyOutside={hotKey}
+                                setIsEnterOn={handleSave}
+                            />
+                        ) : (
+                            <QuillDeltaView content={data.content} />
+                        )}
 
                         <Files
                             files={data.files}

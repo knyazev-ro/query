@@ -4,7 +4,7 @@ import { PlusCircleIcon } from 'lucide-react';
 import ProjectCard from './ProjectCard';
 import StageHeader from './StageHeader';
 
-export default function Stage({ stage, isOver, idx }) {
+export default function Stage({ stage, isOver, idx, totalStages }) {
     const { setNodeRef } = useDroppable({
         id: stage.id,
     });
@@ -23,7 +23,7 @@ export default function Stage({ stage, isOver, idx }) {
             key={stage.id}
             className={`min-h-[400px] min-w-96 lg:w-120 flex-shrink-0 border-gray-200 p-4 text-stone-950`}
         >
-            <StageHeader stage={stage} idx={idx}/>
+            <StageHeader stage={stage} idx={idx} totalStages={totalStages} />
             <div className="space-y-3">
                 {stage?.projects?.map((project) => (
                     <ProjectCard key={project.id} project={project} />

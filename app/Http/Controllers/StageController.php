@@ -36,4 +36,29 @@ class StageController extends Controller
 
         return Redirect::back();
     }
+
+    public function move(Stage $stage, string $direction)
+    {
+        abort_unless(in_array($direction, ['left', 'right'], true), 404);
+
+        $operator = $direction === 'left' ? '<' : '>';
+        $sortDirection = $direction === 'left' ? 'desc' : 'asc';
+
+        $neighbor = Stage::query()
+            ->where('pipeline_id', $stage->pipeline_id)
+            ->where('order', $operator, $stage->order)
+            ->orderBy('order', $sortDirection)
+            ->first();
+
+        if (! $neighbor) {
+            return Redirect::back();
+        }
+
+        [$stageOrder, $neighborOrder] = [$stage->order, $neighbor->order];
+
+        $stage->update(['order' => $neighborOrder]);
+        $neighbor->update(['order' => $stageOrder]);
+
+        return Redirect::back();
+    }
 }

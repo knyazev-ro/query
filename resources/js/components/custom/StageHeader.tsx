@@ -10,7 +10,7 @@ import {
 import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function StageHeader({ stage, idx }) {
+export default function StageHeader({ stage, idx, totalStages }) {
     const [isEditing, setIsEditing] = useState(false);
     const form = useForm({
         name: stage.name ?? '',
@@ -26,6 +26,12 @@ export default function StageHeader({ stage, idx }) {
 
     const createProject = () => {
         router.get(route('projects.create', stage.id), {}, { preserveScroll: true });
+    };
+
+    const moveStage = (direction) => {
+        router.post(route('kanban.stages.move', [stage.id, direction]), {}, {
+            preserveScroll: true,
+        });
     };
 
     return (
@@ -74,7 +80,7 @@ export default function StageHeader({ stage, idx }) {
                         <button
                             type="button"
                             onClick={() => setIsEditing(false)}
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white/10 hover:text-white"
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
                         >
                             <XMarkIcon className="w-4" />
                         </button>
@@ -83,13 +89,17 @@ export default function StageHeader({ stage, idx }) {
                     <>
                         <button
                             type="button"
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white/10 hover:text-white"
+                            disabled={idx === 0}
+                            onClick={() => moveStage('left')}
+                            className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
                         >
                             <ChevronLeftIcon className="w-4" />
                         </button>
 
                         <button
                             type="button"
+                            disabled={idx >= totalStages - 1}
+                            onClick={() => moveStage('right')}
                             className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-white/10 hover:text-white"
                         >
                             <ChevronRightIcon className="w-4" />
