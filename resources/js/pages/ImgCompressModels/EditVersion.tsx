@@ -1,14 +1,15 @@
 import Layout from '@/components/custom/Layout';
 import {
     ArrowLeftIcon,
+    ArrowPathIcon,
     CheckIcon,
     PlusIcon,
     TrashIcon,
 } from '@heroicons/react/16/solid';
 import { router, useForm } from '@inertiajs/react';
-import { GitBranchIcon } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { Dataset, ImgCompressModel, ModelVersion } from './types';
+import VersionGraph from './VersionGraph';
 
 type VersionForm = {
     img_compress_model_id: number;
@@ -24,13 +25,9 @@ type ModelForm = {
     description: string;
 };
 
-const statusClass: Record<string, string> = {
-    queue: 'bg-white/5 text-gray-400',
-    run: 'bg-amber-500/10 text-amber-300',
-    ready: 'bg-emerald-500/10 text-emerald-300',
-    cancel: 'bg-zinc-500/10 text-zinc-400',
-    error: 'bg-[#ff1b1c]/10 text-[#ff6b6c]',
-};
+function formatMetric(value?: number | null, digits = 4) {
+    return typeof value === 'number' ? value.toFixed(digits) : '-';
+}
 
 export default function EditVersion({
     imgCompressModel,
@@ -48,6 +45,23 @@ export default function EditVersion({
         () => versions.find((version) => version.id === selectedVersionId),
         [selectedVersionId, versions],
     );
+    const hasActiveTraining = versions.some((version) =>
+        ['queue', 'run'].includes(version.status),
+    );
+
+    useEffect(() => {
+        if (!hasActiveTraining) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['imgCompressModel'],
+            });
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, [hasActiveTraining]);
 
     const modelForm = useForm<ModelForm>({
         name: imgCompressModel.name,
@@ -144,6 +158,14 @@ export default function EditVersion({
         );
     };
 
+    const retryVersion = (version: ModelVersion) => {
+        router.post(
+            route('img-compress-models.versions.retry', version.id),
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     const fieldClass =
         'h-10 rounded border border-white/10 bg-[#101010] px-3 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-[#ff1b1c]/70';
     const labelClass = 'text-xs font-medium text-gray-400';
@@ -212,48 +234,17 @@ export default function EditVersion({
                     </button>
                 </form>
 
-                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
                     <div>
                         <div className="mb-3 text-xs font-medium text-gray-400">
                             Version tree
                         </div>
 
-                        <div className="space-y-2">
-                            {versions.map((version) => (
-                                <button
-                                    key={version.id}
-                                    type="button"
-                                    onClick={() => selectVersion(version)}
-                                    className={`w-full rounded border p-3 text-left transition ${
-                                        selectedVersion?.id === version.id
-                                            ? 'border-[#ff1b1c]/70 bg-[#ff1b1c]/10'
-                                            : 'border-white/10 bg-[#141414] hover:bg-white/5'
-                                    }`}
-                                >
-                                    <div className="mb-2 flex items-center justify-between gap-2">
-                                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-200">
-                                            <GitBranchIcon className="h-4 w-4" />
-                                            v{version.version_number}
-                                        </span>
-                                        <span
-                                            className={`rounded px-2 py-0.5 text-[10px] ${statusClass[version.status]}`}
-                                        >
-                                            {version.status}
-                                        </span>
-                                    </div>
-
-                                    <div className="text-[11px] text-gray-500">
-                                        parent:{' '}
-                                        {version.parent_version_id
-                                            ? `#${version.parent_version_id}`
-                                            : 'none'}
-                                    </div>
-                                    <div className="mt-1 text-[11px] text-gray-500">
-                                        {version.datasets.length} datasets
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                        <VersionGraph
+                            versions={versions}
+                            selectedVersionId={selectedVersionId}
+                            onSelect={selectVersion}
+                        />
                     </div>
 
                     <form onSubmit={submitEdit} className="min-w-0">
@@ -270,14 +261,31 @@ export default function EditVersion({
                             </div>
 
                             {selectedVersion && (
-                                <button
-                                    type="button"
-                                    onClick={() => deleteVersion(selectedVersion)}
-                                    className="inline-flex h-9 items-center gap-2 rounded border border-white/10 px-3 text-xs font-semibold text-gray-400 transition hover:border-[#ff1b1c]/50 hover:bg-[#ff1b1c]/10 hover:text-[#ff1b1c]"
-                                >
-                                    <TrashIcon className="h-4 w-4" />
-                                    Delete
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {selectedVersion.status === 'error' && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                retryVersion(selectedVersion)
+                                            }
+                                            className="inline-flex h-9 items-center gap-2 rounded border border-amber-500/30 px-3 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/10"
+                                        >
+                                            <ArrowPathIcon className="h-4 w-4" />
+                                            Retry
+                                        </button>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            deleteVersion(selectedVersion)
+                                        }
+                                        className="inline-flex h-9 items-center gap-2 rounded border border-white/10 px-3 text-xs font-semibold text-gray-400 transition hover:border-[#ff1b1c]/50 hover:bg-[#ff1b1c]/10 hover:text-[#ff1b1c]"
+                                    >
+                                        <TrashIcon className="h-4 w-4" />
+                                        Delete
+                                    </button>
+                                </div>
                             )}
                         </div>
 
@@ -336,6 +344,67 @@ export default function EditVersion({
                                         toggleDataset(editForm, datasetId)
                                     }
                                 />
+
+                                {(selectedVersion.quality_metrics ??
+                                    selectedVersion.progress
+                                        ?.quality_metrics) && (
+                                    <div className="rounded border border-white/10 bg-[#141414] p-4">
+                                        <div className="mb-3 text-xs font-medium text-gray-400">
+                                            Quality
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-sm">
+                                            <MetricBox
+                                                label="PSNR"
+                                                value={formatMetric(
+                                                    (
+                                                        selectedVersion.quality_metrics ??
+                                                        selectedVersion
+                                                            .progress
+                                                            ?.quality_metrics
+                                                    )?.psnr,
+                                                    2,
+                                                )}
+                                            />
+                                            <MetricBox
+                                                label="SSIM"
+                                                value={formatMetric(
+                                                    (
+                                                        selectedVersion.quality_metrics ??
+                                                        selectedVersion
+                                                            .progress
+                                                            ?.quality_metrics
+                                                    )?.ssim,
+                                                )}
+                                            />
+                                            <MetricBox
+                                                label="MSE"
+                                                value={formatMetric(
+                                                    (
+                                                        selectedVersion.quality_metrics ??
+                                                        selectedVersion
+                                                            .progress
+                                                            ?.quality_metrics
+                                                    )?.mse,
+                                                    6,
+                                                )}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedVersion.status === 'error' &&
+                                    selectedVersion.errors && (
+                                        <div className="rounded border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-4">
+                                            <div className="mb-2 text-xs font-semibold uppercase text-[#ff8b8c]">
+                                                ML error
+                                            </div>
+                                            <pre className="max-h-48 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[#ff6b6c]">
+                                                {selectedVersion.errors
+                                                    .replace(/\s+/g, ' ')
+                                                    .slice(0, 1200)}
+                                            </pre>
+                                        </div>
+                                    )}
 
                                 <button
                                     type="submit"
@@ -491,6 +560,15 @@ function DatasetPicker({
                     );
                 })}
             </div>
+        </div>
+    );
+}
+
+function MetricBox({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded bg-white/5 p-2 text-gray-500">
+            {label}
+            <div className="mt-1 text-gray-300">{value}</div>
         </div>
     );
 }

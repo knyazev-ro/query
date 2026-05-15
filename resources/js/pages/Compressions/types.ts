@@ -20,6 +20,13 @@ export type ModelVersion = {
     model?: ImgCompressModel | null;
 };
 
+export type QualityMetrics = {
+    mse?: number | null;
+    psnr?: number | null;
+    ssim?: number | null;
+    samples?: number | null;
+};
+
 export type ImgMediaStatus =
     | 'just created'
     | 'compressing'
@@ -39,6 +46,7 @@ export type ImgMedia = {
     model_version_id?: number | null;
     errors?: string | null;
     status: ImgMediaStatus;
+    quality_metrics?: QualityMetrics | null;
     created_at?: string;
     updated_at?: string;
     author?: Author | null;

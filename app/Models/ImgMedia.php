@@ -24,6 +24,7 @@ class ImgMedia extends Model
         'entity_type',
         'errors',
         'status',
+        'quality_metrics',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class ImgMedia extends Model
         'compressed_size' => 'integer',
         'author_id' => 'integer',
         'model_version_id' => 'integer',
+        'quality_metrics' => 'array',
     ];
 
     public function author(): BelongsTo {

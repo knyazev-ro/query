@@ -37,6 +37,7 @@ class CallbackController extends Controller
             ])],
             'compressed_path' => 'required_if:status,compressed|nullable|string',
             'compressed_size' => 'nullable|integer|min:0',
+            'quality_metrics' => 'nullable|array',
         ]);
 
         $imgMedia = ImgMedia::findOrFail($validated['id']);
@@ -48,6 +49,7 @@ class CallbackController extends Controller
 
         if ($validated['status'] === 'compressed') {
             $updateData['compressed_img_path'] = $validated['compressed_path'];
+            $updateData['quality_metrics'] = $validated['quality_metrics'] ?? $imgMedia->quality_metrics;
 
             if (array_key_exists('compressed_size', $validated)) {
                 $updateData['compressed_size'] = $validated['compressed_size'];
@@ -75,6 +77,7 @@ class CallbackController extends Controller
                 'error',
             ])],
             'progress' => 'nullable|array',
+            'quality_metrics' => 'nullable|array',
         ]);
 
         $modelVersion = ModelVersion::findOrFail($validated['id']);
@@ -83,6 +86,7 @@ class CallbackController extends Controller
             'status' => $validated['status'],
             'errors' => $validated['errors'] ?? null,
             'progress' => $validated['progress'] ?? $modelVersion->progress,
+            'quality_metrics' => $validated['quality_metrics'] ?? $modelVersion->quality_metrics,
         ]);
 
         return response()->json([

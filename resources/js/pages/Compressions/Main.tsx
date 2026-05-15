@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
 import { ImageIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import { route } from 'ziggy-js';
 import type { ImgMedia, PaginatedImgMedia } from './types';
 
@@ -44,8 +45,33 @@ function compressionRatio(image: ImgMedia) {
     return `${Math.max(saved, 0).toFixed(1)}% saved`;
 }
 
+function shortError(message?: string | null) {
+    return (message ?? '').replace(/\s+/g, ' ').trim().slice(0, 1000);
+}
+
+function formatMetric(value?: number | null, digits = 4) {
+    return typeof value === 'number' ? value.toFixed(digits) : '-';
+}
+
 export default function Main({ images }: { images: PaginatedImgMedia }) {
     const items = images?.data ?? [];
+    const hasActiveCompression = items.some((image) =>
+        ['just created', 'compressing'].includes(image.status),
+    );
+
+    useEffect(() => {
+        if (!hasActiveCompression) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['images'],
+            });
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, [hasActiveCompression]);
 
     const deleteImage = (image: ImgMedia) => {
         if (!confirm(`Delete image "${image.original_name}"?`)) {
@@ -67,6 +93,14 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
         router.post(
             route('compressions.cancel', image.model_version_id),
             { image_ids: [image.id] },
+            { preserveScroll: true },
+        );
+    };
+
+    const retryImage = (image: ImgMedia) => {
+        router.post(
+            route('compressions.retry', image.id),
+            {},
             { preserveScroll: true },
         );
     };
@@ -188,9 +222,51 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
                                             </div>
                                         )}
 
+                                        {image.quality_metrics && (
+                                            <div className="mb-4 grid grid-cols-3 gap-1 text-[10px]">
+                                                <div className="rounded bg-white/5 p-1.5 text-gray-500">
+                                                    PSNR
+                                                    <div className="mt-0.5 text-gray-300">
+                                                        {formatMetric(
+                                                            image
+                                                                .quality_metrics
+                                                                .psnr,
+                                                            2,
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="rounded bg-white/5 p-1.5 text-gray-500">
+                                                    SSIM
+                                                    <div className="mt-0.5 text-gray-300">
+                                                        {formatMetric(
+                                                            image
+                                                                .quality_metrics
+                                                                .ssim,
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="rounded bg-white/5 p-1.5 text-gray-500">
+                                                    MSE
+                                                    <div className="mt-0.5 text-gray-300">
+                                                        {formatMetric(
+                                                            image
+                                                                .quality_metrics
+                                                                .mse,
+                                                            6,
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {image.errors && (
-                                            <div className="mb-4 line-clamp-2 rounded bg-[#ff1b1c]/10 p-2 text-xs text-[#ff6b6c]">
-                                                {image.errors}
+                                            <div className="mb-4 rounded border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-2">
+                                                <div className="mb-1 text-[10px] font-semibold uppercase text-[#ff8b8c]">
+                                                    ML error
+                                                </div>
+                                                <div className="line-clamp-3 break-words text-xs text-[#ff6b6c]">
+                                                    {shortError(image.errors)}
+                                                </div>
                                             </div>
                                         )}
 
@@ -227,6 +303,19 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
                                                         ) : (
                                                             <ArrowPathIcon className="h-4 w-4" />
                                                         )}
+                                                    </button>
+                                                )}
+
+                                                {image.status === 'error' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            retryImage(image)
+                                                        }
+                                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-400 transition hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-300"
+                                                        title="Retry"
+                                                    >
+                                                        <ArrowPathIcon className="h-4 w-4" />
                                                     </button>
                                                 )}
 

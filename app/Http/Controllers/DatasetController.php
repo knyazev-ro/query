@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Dataset;
+use App\Services\FileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Throwable;
 
 class DatasetController extends Controller
 {
@@ -48,6 +50,7 @@ class DatasetController extends Controller
         }
 
         $file = $request->file('dataset');
+        $archiveInfo = $this->inspectArchive($file, (int) $validated['image_resolution']);
         $path = $file->store('datasets');
         $validated['name'] = $validated['name'] ?? pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         unset($validated['dataset']);
@@ -59,6 +62,7 @@ class DatasetController extends Controller
             'original_filename' => $file->getClientOriginalName(),
             'file_size' => $file->getSize(),
             'mime_type' => $file->getMimeType(),
+            'images_count' => $archiveInfo['images_count'],
         ]);
 
         return Redirect::back()->with('message', 'Dataset uploaded successfully.');
@@ -76,6 +80,7 @@ class DatasetController extends Controller
         $validated['name'] = $validated['name'] ?? $dataset->name;
 
         if ($request->hasFile('dataset')) {
+            $archiveInfo = $this->inspectArchive($request->file('dataset'), (int) $validated['image_resolution']);
             Storage::delete($dataset->file_path);
 
             $file = $request->file('dataset');
@@ -83,6 +88,7 @@ class DatasetController extends Controller
             $validated['original_filename'] = $file->getClientOriginalName();
             $validated['file_size'] = $file->getSize();
             $validated['mime_type'] = $file->getMimeType();
+            $validated['images_count'] = $archiveInfo['images_count'];
         }
         unset($validated['dataset']);
 
@@ -115,8 +121,49 @@ class DatasetController extends Controller
             'image_resolution' => 'required|integer|in:64,128,256,512',
             'train_split' => 'required|integer|min:0|max:100',
             'test_split' => 'required|integer|min:0|max:100',
-            'images_count' => 'nullable|integer|min:0',
             'uses_count' => 'nullable|integer|min:0',
         ]);
+    }
+
+    private function inspectArchive($file, int $imageResolution): array
+    {
+        try {
+            $info = app(FileService::class)->inspectDatasetArchive($file);
+        } catch (Throwable $exception) {
+            throw ValidationException::withMessages([
+                'dataset' => $exception->getMessage(),
+            ]);
+        }
+        $messages = [];
+
+        if ($info['images_count'] <= 0) {
+            $messages[] = 'Dataset archive must contain at least one readable image.';
+        }
+
+        if ($info['broken_files'] !== []) {
+            $sample = implode(', ', array_slice($info['broken_files'], 0, 5));
+            $messages[] = "Broken image files detected: {$sample}.";
+        }
+
+        if ($info['empty_directories'] !== []) {
+            $sample = implode(', ', array_slice($info['empty_directories'], 0, 5));
+            $messages[] = "Empty folders detected: {$sample}.";
+        }
+
+        if (
+            $info['min_width'] !== null
+            && $info['min_height'] !== null
+            && ($info['min_width'] < $imageResolution || $info['min_height'] < $imageResolution)
+        ) {
+            $messages[] = "Some images are smaller than {$imageResolution}x{$imageResolution}; minimum found is {$info['min_width']}x{$info['min_height']}.";
+        }
+
+        if ($messages !== []) {
+            throw ValidationException::withMessages([
+                'dataset' => implode(' ', $messages),
+            ]);
+        }
+
+        return $info;
     }
 }

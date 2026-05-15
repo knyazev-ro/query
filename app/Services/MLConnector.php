@@ -92,7 +92,7 @@ class MLConnector
     {
         return $this->postJson('/decompress', [
             'model_version' => $this->modelVersionPayload($modelVersion),
-            'images' => $this->imagesPayload($imgMedia, 'compressed_img_path'),
+            'images' => $this->imagesPayload($imgMedia, 'compressed_img_path', includeOriginal: true),
         ]);
     }
 
@@ -169,20 +169,26 @@ class MLConnector
         return $payload;
     }
 
-    private function imagesPayload(Collection $imgMedia, string $pathAttribute): array
+    private function imagesPayload(Collection $imgMedia, string $pathAttribute, bool $includeOriginal = false): array
     {
         return $imgMedia
-            ->map(function (ImgMedia $image) use ($pathAttribute) {
+            ->map(function (ImgMedia $image) use ($pathAttribute, $includeOriginal) {
                 $path = $image->{$pathAttribute} ?: $image->img_path;
 
                 if ($path === null) {
                     throw new RuntimeException("Image {$image->id} does not have a path for {$pathAttribute}.");
                 }
 
-                return [
+                $payload = [
                     ...$image->toArray(),
                     'file_base64' => $this->fileBase64($path),
                 ];
+
+                if ($includeOriginal && $image->img_path !== null && Storage::exists($image->img_path)) {
+                    $payload['original_file_base64'] = $this->fileBase64($image->img_path);
+                }
+
+                return $payload;
             })
             ->values()
             ->all();

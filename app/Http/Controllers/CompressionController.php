@@ -91,6 +91,12 @@ class CompressionController extends Controller
         $image = $result['images'][0] ?? null;
         abort_if(! is_array($image) || empty($image['file_base64']), 502);
 
+        if (! empty($image['quality_metrics']) && is_array($image['quality_metrics'])) {
+            $imgMedia->update([
+                'quality_metrics' => $image['quality_metrics'],
+            ]);
+        }
+
         $bytes = base64_decode($image['file_base64'], true);
         abort_if($bytes === false, 502);
 
@@ -209,6 +215,30 @@ class CompressionController extends Controller
             'data' => ImgMedia::query()
                 ->whereIn('id', $images->pluck('id'))
                 ->get(),
+        ]);
+    }
+
+    public function retry(Request $request, ImgMedia $imgMedia)
+    {
+        $this->authorizeImage($imgMedia);
+
+        abort_if($imgMedia->modelVersion === null || $imgMedia->modelVersion->status !== 'ready', 404);
+        abort_if($imgMedia->img_path === null || ! Storage::exists($imgMedia->img_path), 404);
+
+        $imgMedia->update([
+            'status' => 'just created',
+            'errors' => '',
+            'quality_metrics' => null,
+        ]);
+
+        CompressJob::dispatch(
+            $imgMedia->model_version_id,
+            [$imgMedia->id],
+        )->afterCommit();
+
+        return $this->responseFor($request, [
+            'message' => 'Image queued for compression retry.',
+            'data' => $imgMedia->fresh(['author', 'modelVersion.model']),
         ]);
     }
 

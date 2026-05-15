@@ -20,8 +20,16 @@ export type TrainingProgress = {
     remaining_steps?: number;
     total_iterations?: number;
     losses?: Record<string, number> | null;
+    quality_metrics?: QualityMetrics | null;
     message?: string | null;
     updated_at?: string | null;
+};
+
+export type QualityMetrics = {
+    mse?: number | null;
+    psnr?: number | null;
+    ssim?: number | null;
+    samples?: number | null;
 };
 
 export type ModelVersion = {
@@ -33,6 +41,7 @@ export type ModelVersion = {
     status: 'queue' | 'run' | 'ready' | 'cancel' | 'error';
     errors?: string | null;
     progress?: TrainingProgress | null;
+    quality_metrics?: QualityMetrics | null;
     author?: Author | null;
     parent_version?: ModelVersion | null;
     datasets: Dataset[];

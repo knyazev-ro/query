@@ -1,5 +1,6 @@
 import Layout from '@/components/custom/Layout';
 import {
+    ArrowPathIcon,
     Cog6ToothIcon,
     CubeIcon,
     PlusIcon,
@@ -17,6 +18,10 @@ const statusClass: Record<string, string> = {
     cancel: 'bg-zinc-500/10 text-zinc-400',
     error: 'bg-[#ff1b1c]/10 text-[#ff6b6c]',
 };
+
+function formatMetric(value?: number | null, digits = 4) {
+    return typeof value === 'number' ? value.toFixed(digits) : '-';
+}
 
 export default function Main({ models }: { models: PaginatedModels }) {
     const items = models?.data ?? [];
@@ -45,6 +50,14 @@ export default function Main({ models }: { models: PaginatedModels }) {
 
         router.post(
             route('img-compress-models.delete', model.id),
+            {},
+            { preserveScroll: true },
+        );
+    };
+
+    const retryVersion = (versionId: number) => {
+        router.post(
+            route('img-compress-models.versions.retry', versionId),
             {},
             { preserveScroll: true },
         );
@@ -210,6 +223,70 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                                         </span>
                                                     ))}
                                             </div>
+
+                                            {(version.quality_metrics ??
+                                                version.progress
+                                                    ?.quality_metrics) && (
+                                                <div className="mt-3 grid grid-cols-3 gap-1 text-[10px]">
+                                                    {[
+                                                        ['PSNR', 'psnr', 2],
+                                                        ['SSIM', 'ssim', 4],
+                                                        ['MSE', 'mse', 6],
+                                                    ].map(
+                                                        ([
+                                                            label,
+                                                            key,
+                                                            digits,
+                                                        ]) => {
+                                                            const metrics =
+                                                                version.quality_metrics ??
+                                                                version
+                                                                    .progress
+                                                                    ?.quality_metrics;
+
+                                                            return (
+                                                                <div
+                                                                    key={key}
+                                                                    className="rounded bg-white/5 p-1.5 text-gray-500"
+                                                                >
+                                                                    {label}
+                                                                    <div className="mt-0.5 text-gray-300">
+                                                                        {formatMetric(
+                                                                            metrics?.[
+                                                                                key as keyof typeof metrics
+                                                                            ] as
+                                                                                | number
+                                                                                | null
+                                                                                | undefined,
+                                                                            digits as number,
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        },
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {version.status === 'error' &&
+                                                version.errors && (
+                                                    <div className="mt-3 rounded border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-2">
+                                                        <div className="mb-1 text-[10px] font-semibold uppercase text-[#ff8b8c]">
+                                                            ML error
+                                                        </div>
+                                                        <div className="line-clamp-3 break-words text-xs text-[#ff6b6c]">
+                                                            {version.errors
+                                                                .replace(
+                                                                    /\s+/g,
+                                                                    ' ',
+                                                                )
+                                                                .slice(
+                                                                    0,
+                                                                    1000,
+                                                                )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                         </div>
                                     ) : (
                                         <div className="mb-4 rounded border border-dashed border-white/10 p-3 text-xs text-gray-500">
@@ -238,6 +315,19 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                             <Cog6ToothIcon className="h-3.5 w-3.5" />
                                             Versions
                                         </button>
+
+                                        {version?.status === 'error' && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    retryVersion(version.id)
+                                                }
+                                                className="grid h-8 w-8 place-items-center rounded border border-amber-500/30 text-amber-300 transition hover:bg-amber-500/10"
+                                                title="Retry training"
+                                            >
+                                                <ArrowPathIcon className="h-4 w-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );

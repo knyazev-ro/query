@@ -2,12 +2,13 @@ import Layout from '@/components/custom/Layout';
 import {
     ArrowDownTrayIcon,
     ArrowLeftIcon,
+    ArrowPathIcon,
     CheckIcon,
     StopIcon,
     TrashIcon,
 } from '@heroicons/react/16/solid';
 import { router, useForm } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useEffect } from 'react';
 import { route } from 'ziggy-js';
 import type { ImgMedia } from './types';
 
@@ -48,6 +49,14 @@ function percentSaved(image: ImgMedia) {
     ).toFixed(1);
 }
 
+function shortError(message?: string | null) {
+    return (message ?? '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+}
+
+function formatMetric(value?: number | null, digits = 4) {
+    return typeof value === 'number' ? value.toFixed(digits) : '-';
+}
+
 export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
     const { data, setData, processing, errors } = useForm<ImageForm>({
         original_name: imgMedia.original_name,
@@ -85,9 +94,32 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
         );
     };
 
+    const retryImage = () => {
+        router.post(
+            route('compressions.retry', imgMedia.id),
+            {},
+            { preserveScroll: true },
+        );
+    };
+
     const saved = percentSaved(imgMedia);
     const isActive =
         imgMedia.status === 'just created' || imgMedia.status === 'compressing';
+
+    useEffect(() => {
+        if (!isActive) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['imgMedia'],
+            });
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, [isActive]);
+
     const fieldClass =
         'h-10 rounded border border-white/10 bg-[#101010] px-3 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-[#ff1b1c]/70';
 
@@ -277,9 +309,50 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                             </div>
                         </div>
 
+                        {imgMedia.quality_metrics && (
+                            <div className="rounded-lg border border-white/10 bg-[#141414] p-4">
+                                <div className="mb-3 text-xs font-medium text-gray-400">
+                                    Quality
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-sm">
+                                    <div className="rounded bg-white/5 p-2 text-gray-500">
+                                        PSNR
+                                        <div className="mt-1 text-gray-300">
+                                            {formatMetric(
+                                                imgMedia.quality_metrics.psnr,
+                                                2,
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="rounded bg-white/5 p-2 text-gray-500">
+                                        SSIM
+                                        <div className="mt-1 text-gray-300">
+                                            {formatMetric(
+                                                imgMedia.quality_metrics.ssim,
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="rounded bg-white/5 p-2 text-gray-500">
+                                        MSE
+                                        <div className="mt-1 text-gray-300">
+                                            {formatMetric(
+                                                imgMedia.quality_metrics.mse,
+                                                6,
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {imgMedia.errors && (
-                            <div className="rounded-lg border border-[#ff1b1c]/20 bg-[#ff1b1c]/10 p-4 text-sm text-[#ff6b6c]">
-                                {imgMedia.errors}
+                            <div className="rounded-lg border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-4">
+                                <div className="mb-2 text-xs font-semibold uppercase text-[#ff8b8c]">
+                                    ML error
+                                </div>
+                                <pre className="max-h-52 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[#ff6b6c]">
+                                    {shortError(imgMedia.errors)}
+                                </pre>
                             </div>
                         )}
 
@@ -292,6 +365,17 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                                 >
                                     <StopIcon className="h-4 w-4" />
                                     Cancel
+                                </button>
+                            )}
+
+                            {imgMedia.status === 'error' && (
+                                <button
+                                    type="button"
+                                    onClick={retryImage}
+                                    className="inline-flex h-10 items-center gap-2 rounded border border-amber-500/30 px-3 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/10"
+                                >
+                                    <ArrowPathIcon className="h-4 w-4" />
+                                    Retry
                                 </button>
                             )}
 

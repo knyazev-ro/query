@@ -12,7 +12,6 @@ type DatasetForm = {
     image_resolution: number;
     train_split: number;
     test_split: number;
-    images_count: number;
     uses_count: number;
 };
 
@@ -27,7 +26,6 @@ export default function Create() {
         image_resolution: 256,
         train_split: 80,
         test_split: 20,
-        images_count: 0,
         uses_count: 0,
     });
 
@@ -257,29 +255,6 @@ export default function Create() {
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
-                                <label className={labelClass}>
-                                    Images count
-                                </label>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    value={data.images_count}
-                                    onChange={(e) =>
-                                        setData(
-                                            'images_count',
-                                            Number(e.target.value),
-                                        )
-                                    }
-                                    className={fieldClass}
-                                />
-                                {errors.images_count && (
-                                    <div className="text-xs text-[#ff1b1c]">
-                                        {errors.images_count}
-                                    </div>
-                                )}
-                            </div>
-
                             <div className="grid gap-2">
                                 <label className={labelClass}>Uses count</label>
                                 <input

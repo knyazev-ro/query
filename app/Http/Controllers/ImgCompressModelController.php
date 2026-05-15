@@ -156,6 +156,20 @@ class ImgCompressModelController extends Controller
         return Redirect::back()->with('message', 'Version updated successfully.');
     }
 
+    public function retryVersion(ModelVersion $modelVersion)
+    {
+        abort_if($modelVersion->datasets()->count() === 0, 422, 'Version has no datasets.');
+
+        $modelVersion->update([
+            'status' => 'queue',
+            'errors' => null,
+            'progress' => null,
+            'quality_metrics' => null,
+        ]);
+
+        return Redirect::back()->with('message', "Version {$modelVersion->version_number} queued for retry.");
+    }
+
     public function deleteVersion(ModelVersion $modelVersion)
     {
         $modelVersion->delete();

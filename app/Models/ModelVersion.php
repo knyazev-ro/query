@@ -19,6 +19,7 @@ class ModelVersion extends Model
         'author_id',
         'errors', // long text TEXT
         'progress',
+        'quality_metrics',
     ];
 
     protected $casts = [
@@ -28,6 +29,7 @@ class ModelVersion extends Model
         'image_resolution' => 'integer',
         'author_id' => 'integer',
         'progress' => 'array',
+        'quality_metrics' => 'array',
     ];
 
     protected static function booted(): void

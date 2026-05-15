@@ -69,6 +69,7 @@ Route::prefix('img-compress-models')->name('img-compress-models.')->group(functi
     Route::get('/versions/{imgCompressModel}/edit', [ImgCompressModelController::class, 'editVersion'])->name('versions.edit');
     Route::post('/versions/from/{modelVersion?}', [ImgCompressModelController::class, 'createNewVersionFrom'])->name('versions.store');
     Route::post('/versions/update/{modelVersion}', [ImgCompressModelController::class, 'updateVersion'])->name('versions.update');
+    Route::post('/versions/retry/{modelVersion}', [ImgCompressModelController::class, 'retryVersion'])->name('versions.retry');
     Route::post('/versions/delete/{modelVersion}', [ImgCompressModelController::class, 'deleteVersion'])->name('versions.delete');
 });
 
@@ -83,6 +84,7 @@ Route::middleware(['auth', 'verified'])->prefix('compressions')->name('compressi
     Route::post('/update/{imgMedia}', [CompressionController::class, 'update'])->name('update');
     Route::post('/delete/{imgMedia}', [CompressionController::class, 'destroy'])->name('delete');
     Route::post('/cancel/{modelVersion}', [CompressionController::class, 'cancel'])->name('cancel');
+    Route::post('/retry/{imgMedia}', [CompressionController::class, 'retry'])->name('retry');
 });
 
 Route::prefix('graph')->name('graph.')->group(function () {

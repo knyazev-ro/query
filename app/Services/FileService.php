@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Intervention\Image\Laravel\Facades\Image;
 use RuntimeException;
 use ZipArchive;
@@ -128,6 +129,104 @@ class FileService
         return $destinationRealPath;
     }
 
+    /**
+     * Inspect a dataset archive without trusting user-provided image counts.
+     *
+     * @return array{
+     *     images_count:int,
+     *     broken_files:array<int,string>,
+     *     empty_directories:array<int,string>,
+     *     resolutions:array<int,string>,
+     *     min_width:int|null,
+     *     min_height:int|null,
+     *     max_width:int|null,
+     *     max_height:int|null
+     * }
+     */
+    public function inspectDatasetArchive(string|UploadedFile $path): array
+    {
+        $archivePath = $path instanceof UploadedFile
+            ? $path->getRealPath()
+            : $this->resolvePath($path);
+
+        if ($archivePath === false || $archivePath === null || ! File::exists($archivePath)) {
+            throw new RuntimeException('Dataset archive does not exist.');
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($archivePath) !== true) {
+            throw new RuntimeException('Dataset archive could not be opened.');
+        }
+
+        $directories = [];
+        $imageEntries = [];
+        $brokenFiles = [];
+        $resolutions = [];
+        $minWidth = null;
+        $minHeight = null;
+        $maxWidth = null;
+        $maxHeight = null;
+
+        try {
+            for ($index = 0; $index < $zip->numFiles; $index++) {
+                $entry = $zip->getNameIndex($index);
+
+                if ($entry === false || $this->isUnsafeZipEntry($entry)) {
+                    throw new RuntimeException('Dataset archive contains an unsafe entry.');
+                }
+
+                $normalized = trim(str_replace('\\', '/', $entry), '/');
+                if ($normalized === '' || $normalized === '__MACOSX' || str_starts_with($normalized, '__MACOSX/')) {
+                    continue;
+                }
+
+                if (str_ends_with($entry, '/')) {
+                    $directories[] = $normalized.'/';
+                    continue;
+                }
+
+                if (! $this->isSupportedImageEntry($normalized)) {
+                    continue;
+                }
+
+                $imageEntries[] = $normalized;
+                $contents = $zip->getFromIndex($index);
+                $imageInfo = is_string($contents) ? @getimagesizefromstring($contents) : false;
+
+                if ($imageInfo === false) {
+                    $brokenFiles[] = $normalized;
+                    continue;
+                }
+
+                [$width, $height] = $imageInfo;
+                $resolutions["{$width}x{$height}"] = true;
+                $minWidth = $minWidth === null ? $width : min($minWidth, $width);
+                $minHeight = $minHeight === null ? $height : min($minHeight, $height);
+                $maxWidth = $maxWidth === null ? $width : max($maxWidth, $width);
+                $maxHeight = $maxHeight === null ? $height : max($maxHeight, $height);
+            }
+        } finally {
+            $zip->close();
+        }
+
+        $emptyDirectories = array_values(array_filter(
+            $directories,
+            fn (string $directory) => ! collect($imageEntries)
+                ->contains(fn (string $entry) => str_starts_with($entry, $directory)),
+        ));
+
+        return [
+            'images_count' => count($imageEntries) - count($brokenFiles),
+            'broken_files' => $brokenFiles,
+            'empty_directories' => $emptyDirectories,
+            'resolutions' => array_keys($resolutions),
+            'min_width' => $minWidth,
+            'min_height' => $minHeight,
+            'max_width' => $maxWidth,
+            'max_height' => $maxHeight,
+        ];
+    }
+
     private function resolvePath(string $path): string
     {
         if (File::exists($path)) {
@@ -148,5 +247,10 @@ class FileService
         return str_starts_with($normalized, '/')
             || preg_match('~(^|/)\.\.(/|$)~', $normalized) === 1
             || preg_match('~^[A-Za-z]:/~', $normalized) === 1;
+    }
+
+    private function isSupportedImageEntry(string $entry): bool
+    {
+        return preg_match('~\.(jpe?g|png|bmp|webp|tiff?)$~i', $entry) === 1;
     }
 }
