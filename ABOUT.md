@@ -11,8 +11,10 @@
 - Backend: PHP 8+, Laravel, Eloquent, Laravel Queues.
 - Frontend: React, Inertia.js, TailwindCSS, Vite.
 - ML service connector: `app/Services/MLConnector.php`.
+- Image analysis service: `app/Services/ImageAnalysisService.php` считает Laravel-side JPEG/WebP baseline и heatmap.
 - Очереди: `app/Jobs/TrainJob.php`, `app/Jobs/CompressJob.php`.
 - Callback-и от микросервиса: `app/Http/Controllers/CallbackController.php`.
+- ML diagnostics page: `app/Http/Controllers/MLDiagnosticsController.php`, React page `resources/js/pages/MLDiagnostics/Main.tsx`.
 - URL микросервиса задается через `IMG_COMPRESS_ML_URL`, дефолт `http://127.0.0.1:8001`.
 - Timeout задается через `IMG_COMPRESS_ML_TIMEOUT`, дефолт `60`.
 - Base URL для callback-ов задается через `IMG_COMPRESS_CALLBACK_BASE_URL`. Если Laravel запущен на host machine, а микросервис внутри Docker, обычно нужно `http://host.docker.internal:8000`.
@@ -34,6 +36,48 @@
 - Обучение и сжатие асинхронные: Laravel отправляет задачу и ждет callback.
 - Восстановление (`decompress`) синхронное: Laravel ждет HTTP-ответ с восстановленными файлами/данными.
 - Отмена должна быть best-effort: если задача уже завершилась, сервис должен вернуть корректный ответ без падения.
+- JPEG/WebP baseline и difference heatmap считаются в Laravel. Для heatmap Laravel может вызвать `decompress` через `MLConnector`, но frontend все равно не обращается к Python напрямую.
+
+## Актуальное Состояние На 2026-05-15
+
+Базовый рабочий цикл уже реализован:
+
+- обучение, сжатие, восстановление, отмена обучения и сжатия;
+- callbacks из ML в Laravel;
+- progress polling для обучения и сжатий;
+- CUDA/GPU healthcheck, общий storage volume, preview/download;
+- PSNR / SSIM / MSE после train test split и после compression/decompression;
+- нормальная zip-валидация датасета перед обучением;
+- удаление активной версии сперва делает best-effort cancel, затем удаляет артефакты;
+- UI для ML-ошибок, retry/cancel buttons, graph overview и быстрый список версий.
+
+Дипломный слой наблюдаемости и анализа уже реализован:
+
+- `/ml-diagnostics` показывает доступность ML API, device, torch version, active jobs, storage writable и последние ошибки;
+- `datasets.profile` хранит профиль архива: число читаемых изображений, битые файлы, пустые папки, min/max/avg resolution, форматы, buckets размеров;
+- `model_versions.training_report` хранит mini-report обучения: параметры, датасеты, ML health snapshot, loss history, latest progress, quality metrics, started/finished timestamps;
+- страница версий показывает experiment comparison table: качество, compression stats, размер артефактов, датасеты, duration, статус;
+- страница изображения показывает original/decompressed/heatmap preview, ML quality metrics и baseline comparison с JPEG/WebP;
+- JPEG/WebP baseline подбирается по ближайшему размеру к ML compressed artifact и считается в той же `image_resolution`, что и ML preprocess;
+- difference heatmap генерируется лениво по route `compressions.heatmap` и кэшируется в storage.
+
+Важные Laravel файлы для текущего ML-функционала:
+
+- `app/Http/Controllers/ImgCompressModelController.php` - версии моделей, retry/cancel/delete, experiment stats;
+- `app/Http/Controllers/CompressionController.php` - upload/compress UI flow, preview/download/decompress/heatmap;
+- `app/Http/Controllers/CallbackController.php` - train/compression callbacks, сохранение progress, metrics, report, baseline;
+- `app/Services/MLConnector.php` - единственная точка HTTP-команд Laravel -> Python;
+- `app/Services/FileService.php` - безопасная работа с ZIP, inspect dataset archive;
+- `app/Services/ImageAnalysisService.php` - Laravel-side baseline JPEG/WebP, PSNR/SSIM/MSE для baseline, heatmap generation.
+
+Важные React страницы:
+
+- `resources/js/pages/ImgCompressModels/Main.tsx` - список моделей, polling статусов, latest metrics;
+- `resources/js/pages/ImgCompressModels/EditVersion.tsx` - список версий, graph overview, training report, experiment table;
+- `resources/js/pages/Compressions/Main.tsx` - список сжатий, polling, карточки статусов;
+- `resources/js/pages/Compressions/Show.tsx` - original/decompressed/heatmap preview, baseline table;
+- `resources/js/pages/Datasets/Main.tsx` - dataset profile;
+- `resources/js/pages/MLDiagnostics/Main.tsx` - diagnostics dashboard.
 
 ## ML Цель
 
@@ -73,9 +117,15 @@
 - `status`: `queue`, `run`, `ready`, `cancel`, `error`
 - `errors`
 - `progress`: JSON/JSONB с текущим прогрессом обучения
+- `quality_metrics`: JSON с PSNR / SSIM / MSE по test split после обучения
+- `training_started_at`
+- `training_finished_at`
+- `training_report`: JSON mini-report обучения с параметрами, датасетами, loss history, latest progress, device/torch snapshot и quality metrics
 - `datasets[]`
 - `model`
 - `author`
+
+На странице редактирования версии дополнительно вычисляется `compression_stats` из связанных `ImgMedia`: число изображений, число готовых сжатий, суммарные размеры, saved percent, средние PSNR / SSIM / MSE по сжатым изображениям. Это computed UI/API attribute, отдельной колонки для него нет.
 
 Если `parent_version_id` не `null`, микросервис должен уметь продолжить обучение от артефакта родительской версии. Если родительского артефакта нет, это ошибка обучения.
 
@@ -112,6 +162,7 @@ Laravel передает датасеты внутри `model_version.datasets`.
 - `test_split`
 - `images_count`
 - `uses_count`
+- `profile`: JSON с результатом inspect archive. Сейчас там есть `images_count`, `supported_files_count`, `broken_files`, `broken_files_count`, `empty_directories`, `empty_directories_count`, `resolutions`, `resolution_counts`, `format_counts`, `size_buckets`, `min_width`, `min_height`, `max_width`, `max_height`, `avg_width`, `avg_height`.
 
 Файл датасета - zip-архив. Микросервис должен:
 
@@ -149,6 +200,7 @@ Laravel передает изображения в `images[]`. Каждый imag
 - `status`
 - `errors`
 - `file_base64`
+- `quality_metrics`: JSON. Для ML-сжатия содержит `mse`, `psnr`, `ssim`, `samples`; Laravel дополнительно добавляет `baselines` для JPEG/WebP, `baseline_target_size`, `baseline_note`, `baseline_error` при ошибке и `heatmap` после генерации карты различий.
 
 Для `/compress` `file_base64` содержит исходное изображение из `img_path`.
 
@@ -178,6 +230,13 @@ Laravel передает изображения в `images[]`. Каждый imag
 - `torch_version`;
 - `active_train_jobs`;
 - `active_compression_jobs`.
+- `active_train_job_ids`;
+- `active_compression_job_ids`;
+- `storage_root`;
+- `storage_writable`;
+- `recent_errors`.
+
+Laravel diagnostics page `/ml-diagnostics` вызывает этот endpoint только через `MLConnector::healthcheck()`.
 
 ### `POST /train`
 
@@ -335,7 +394,13 @@ Expected response:
       "original_name": "image.png",
       "mime_type": "image/png",
       "file_base64": "...",
-      "size": 123456
+      "size": 123456,
+      "quality_metrics": {
+        "mse": 0.001,
+        "psnr": 30.0,
+        "ssim": 0.95,
+        "samples": 1
+      }
     }
   ]
 }
@@ -348,6 +413,7 @@ Behavior:
 - Нужно декодировать latent/compressed artifact из `file_base64`.
 - Нужно восстановить изображение decoder-ом.
 - Вернуть результат base64-ом в HTTP response.
+- Если Laravel передает `original_file_base64`, микросервис возвращает `quality_metrics` для original vs reconstructed.
 
 ### `POST /train/cancel`
 
@@ -433,6 +499,12 @@ Request body:
   "id": 1,
   "status": "ready",
   "errors": null,
+  "quality_metrics": {
+    "mse": 0.001,
+    "psnr": 30.0,
+    "ssim": 0.95,
+    "samples": 24
+  },
   "progress": {
     "percent": 100,
     "current_epoch": 1,
@@ -468,6 +540,9 @@ Fields:
 - `status` - новый статус версии.
 - `errors` - nullable string.
 - `progress` - nullable object. Python отправляет его во время обучения примерно каждые 20 batch-итераций, Laravel сохраняет в `model_versions.progress`.
+- `quality_metrics` - nullable object, сохраняется в `model_versions.quality_metrics` и дублируется в `training_report.quality_metrics`.
+
+Laravel на каждом train callback обновляет `training_report`: latest progress, loss history, finished timestamp, duration, errors и metrics. Если версия удалена до callback, Laravel отвечает 200 и игнорирует payload, чтобы микросервис не получал 500.
 
 Frontend на странице моделей использует polling для версий в статусах `queue` и `run`, чтобы обновлять `progress` без ручной перезагрузки страницы.
 
@@ -487,7 +562,13 @@ Request body:
   "status": "compressed",
   "errors": null,
   "compressed_path": "img-media/10/compressed.npz",
-  "compressed_size": 12345
+  "compressed_size": 12345,
+  "quality_metrics": {
+    "mse": 0.001,
+    "psnr": 30.0,
+    "ssim": 0.95,
+    "samples": 1
+  }
 }
 ```
 
@@ -506,6 +587,9 @@ Fields:
 - `errors` - nullable string.
 - `compressed_path` - required only when `status = compressed`.
 - `compressed_size` - optional integer.
+- `quality_metrics` - optional object. При `status = compressed` Laravel сохраняет его в `img_media.quality_metrics`.
+
+После успешного compression callback Laravel пытается добавить JPEG/WebP baseline comparison через `ImageAnalysisService`. Если baseline не удалось посчитать, ошибка кладется в `quality_metrics.baseline_error`, а сам callback остается успешным.
 
 ## Статусы
 
@@ -543,6 +627,9 @@ storage/app/ml/
     img-media-{id}/
       compressed.npz
       metadata.json
+  analysis/
+    img-media-{id}/
+      heatmap.png
   jobs/
     train-{model_version_id}/
     compress-{model_version_id}/
@@ -568,6 +655,28 @@ ml/compressed/img-media-10/compressed.npz
 - `torch_version`;
 - `normalization`;
 - training metrics.
+
+Laravel-side analysis artifacts:
+
+- `ml/analysis/img-media-{id}/heatmap.png` - difference heatmap original vs decompressed, генерируется route `GET /compressions/heatmap/{imgMedia}`;
+- JPEG/WebP baseline files физически не сохраняются, только метрики и выбранный quality/size пишутся в `img_media.quality_metrics.baselines`.
+
+## Laravel Routes Для ML UI
+
+Основные web routes:
+
+- `img-compress-models.index` - список моделей;
+- `img-compress-models.versions.edit` - список версий, graph overview, experiment table;
+- `img-compress-models.versions.cancel` - отмена active/pending training;
+- `img-compress-models.versions.retry` - повтор обучения версии;
+- `img-compress-models.versions.delete` - отмена при необходимости, удаление версии и model artifacts;
+- `compressions.index` - список сжатий;
+- `compressions.show` - подробный preview изображения;
+- `compressions.original` - отдача оригинала;
+- `compressions.compressed` - отдача `.npz` артефакта;
+- `compressions.decompressed` - синхронный вызов ML `/decompress` и отдача reconstructed image;
+- `compressions.heatmap` - генерация/отдача difference heatmap;
+- `ml-diagnostics.index` - диагностика ML-сервиса.
 
 ## Ошибки
 
@@ -629,14 +738,21 @@ Compression:
 
 ## Открытые Решения Для Будущей Сессии
 
-Перед полноценной реализацией нужно согласовать:
+Решено и уже реализовано:
 
-- где физически лежат model artifacts;
-- как Python сохраняет `compressed_path`, доступный Laravel;
-- будет ли общий Docker volume или object storage;
+- model artifacts и compressed artifacts лежат в общем Laravel/Python storage volume;
+- Python сохраняет compressed artifact как относительный Laravel Storage path в `compressed_path`;
+- текущий compressed artifact format: `.npz` с `latent-q4-symmetric-v2`;
+- training metrics, quality metrics, dataset profile и training report хранятся в Laravel DB;
+- baseline JPEG/WebP и heatmap считаются Laravel-side, без прямого общения frontend с Python.
+
+Что еще можно согласовать отдельно:
+
 - нужен ли callback auth token;
-- формат compressed artifact: `.npz`, `.pt`, custom binary;
-- нужно ли хранить training metrics и где их показывать в Laravel.
+- нужен ли отдельный audit log callback/job events;
+- нужен ли artifact cleanup command для orphan files;
+- нужен ли baseline export/download или хранить только метрики;
+- нужен ли object storage вместо локального volume для production-like сценария.
 
 ## Быстрая Карта Laravel Интеграции
 
@@ -659,3 +775,22 @@ Laravel route names:
 - `callbacks.compression`
 
 Laravel validation currently expects exact status strings listed above. Keep spelling exactly the same, including `just created`.
+
+## Проверки После Значимых Изменений
+
+Обычный набор проверок для текущего проекта:
+
+```bash
+php artisan test
+npm run types
+npm run build
+docker compose -f ollsqueeze/docker-compose.yml exec -T ml-api pytest tests
+```
+
+Для ручной проверки ML-сервиса:
+
+```bash
+curl http://127.0.0.1:8001/healthcheck
+```
+
+Полезные ожидания для healthcheck в dev окружении: `status=ok`, `device=cuda` или `cpu`, `storage_writable=true`, `active_train_jobs` и `active_compression_jobs` числовые.

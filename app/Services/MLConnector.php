@@ -29,6 +29,7 @@ class MLConnector
         try {
             $startedAt = now();
             $modelVersion->loadMissing(['datasets', 'model']);
+            $auditLogger = app(MLAuditLogger::class);
 
             $modelVersion->update([
                 'status' => 'run',
@@ -37,12 +38,23 @@ class MLConnector
                 'training_finished_at' => null,
                 'training_report' => $this->initialTrainingReport($modelVersion, $startedAt),
             ]);
+            $auditLogger->info('train_start_requested', [
+                'model_version' => $modelVersion,
+                'message' => "Train start requested for version v{$modelVersion->version_number}.",
+                'context' => [
+                    'callback_url' => $this->callbackUrl('callbacks.train'),
+                ],
+            ]);
 
             return $this->postJson('/train', [
                 'model_version' => $this->modelVersionPayload($modelVersion),
                 'callback_url' => $this->callbackUrl('callbacks.train'),
             ]);
         } catch (Throwable $exception) {
+            app(MLAuditLogger::class)->error('train_start_failed', [
+                'model_version' => $modelVersion,
+                'message' => $exception->getMessage(),
+            ]);
             $modelVersion->update([
                 'status' => 'error',
                 'errors' => $exception->getMessage(),
@@ -74,6 +86,14 @@ class MLConnector
                 'status' => 'compressing',
                 'errors' => '',
             ]);
+            app(MLAuditLogger::class)->info('compression_start_requested', [
+                'model_version' => $modelVersion,
+                'message' => "Compression start requested for {$imgMedia->count()} images.",
+                'context' => [
+                    'image_ids' => $imgMedia->pluck('id')->all(),
+                    'callback_url' => $this->callbackUrl('callbacks.compression'),
+                ],
+            ]);
 
             return $this->postJson('/compress', [
                 'model_version' => $this->modelVersionPayload($modelVersion),
@@ -81,6 +101,13 @@ class MLConnector
                 'callback_url' => $this->callbackUrl('callbacks.compression'),
             ]);
         } catch (Throwable $exception) {
+            app(MLAuditLogger::class)->error('compression_start_failed', [
+                'model_version' => $modelVersion,
+                'message' => $exception->getMessage(),
+                'context' => [
+                    'image_ids' => $imgMedia->pluck('id')->all(),
+                ],
+            ]);
             $imgMedia->each->update([
                 'status' => 'error',
                 'errors' => $exception->getMessage(),
@@ -109,6 +136,11 @@ class MLConnector
 
     public function cancelTrain(ModelVersion $modelVersion): array
     {
+        app(MLAuditLogger::class)->info('train_cancel_requested', [
+            'model_version' => $modelVersion,
+            'message' => "Train cancel requested for version v{$modelVersion->version_number}.",
+        ]);
+
         $response = $this->postJson('/train/cancel', [
             'model_version_id' => $modelVersion->id,
         ]);
@@ -117,12 +149,25 @@ class MLConnector
             'status' => 'cancel',
             'errors' => null,
         ]);
+        app(MLAuditLogger::class)->info('train_cancel_confirmed', [
+            'model_version' => $modelVersion,
+            'message' => "Train cancel confirmed for version v{$modelVersion->version_number}.",
+            'context' => $response,
+        ]);
 
         return $response;
     }
 
     public function cancelCompression(ModelVersion $modelVersion, Collection $imgMedia): array
     {
+        app(MLAuditLogger::class)->info('compression_cancel_requested', [
+            'model_version' => $modelVersion,
+            'message' => "Compression cancel requested for {$imgMedia->count()} images.",
+            'context' => [
+                'image_ids' => $imgMedia->pluck('id')->all(),
+            ],
+        ]);
+
         $response = $this->postJson('/compress/cancel', [
             'model_version_id' => $modelVersion->id,
             'image_ids' => $imgMedia->pluck('id')->values()->all(),
@@ -131,6 +176,11 @@ class MLConnector
         $imgMedia->each->update([
             'status' => 'cancel',
             'errors' => '',
+        ]);
+        app(MLAuditLogger::class)->info('compression_cancel_confirmed', [
+            'model_version' => $modelVersion,
+            'message' => 'Compression cancel confirmed.',
+            'context' => $response,
         ]);
 
         return $response;

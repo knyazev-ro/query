@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Dataset;
 use App\Models\ImgCompressModel;
 use App\Models\ModelVersion;
+use App\Services\MLAuditLogger;
 use App\Services\MLConnector;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,14 +50,14 @@ class ImgCompressModelController extends Controller
         return Inertia::render('ImgCompressModels/Create', compact('datasets'));
     }
 
-    public function storeModel(Request $request)
+    public function storeModel(Request $request, MLAuditLogger $auditLogger)
     {
         $validated = $request->validate([
             ...$this->modelRules(),
             ...$this->versionRules(requireDatasets: true),
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $auditLogger) {
             $model = ImgCompressModel::create([
                 'name' => $validated['name'],
                 'description' => $validated['description'] ?? null,
@@ -72,6 +73,14 @@ class ImgCompressModelController extends Controller
             ]);
 
             $version->datasets()->sync($validated['dataset_ids']);
+            $auditLogger->info('version_queued', [
+                'entity' => $model,
+                'model_version' => $version,
+                'message' => "Initial version v{$version->version_number} queued.",
+                'context' => [
+                    'dataset_ids' => $validated['dataset_ids'],
+                ],
+            ]);
         });
 
         return Redirect::back()->with('message', 'Image compression model created successfully.');
@@ -104,6 +113,7 @@ class ImgCompressModelController extends Controller
 
     public function createNewVersionFrom(Request $request, ?ModelVersion $modelVersion = null)
     {
+        $auditLogger = app(MLAuditLogger::class);
         $validated = $request->validate([
             'img_compress_model_id' => [
                 Rule::requiredIf($modelVersion === null),
@@ -137,6 +147,14 @@ class ImgCompressModelController extends Controller
                 ->all();
 
             $version->datasets()->sync($datasetIds);
+            $auditLogger->info('version_queued', [
+                'model_version' => $version,
+                'message' => "Version v{$version->version_number} queued.",
+                'context' => [
+                    'parent_version_id' => $modelVersion?->id,
+                    'dataset_ids' => $datasetIds,
+                ],
+            ]);
 
             return $version;
         });
@@ -162,7 +180,7 @@ class ImgCompressModelController extends Controller
         return Redirect::back()->with('message', 'Version updated successfully.');
     }
 
-    public function retryVersion(ModelVersion $modelVersion)
+    public function retryVersion(ModelVersion $modelVersion, MLAuditLogger $auditLogger)
     {
         abort_if($modelVersion->datasets()->count() === 0, 422, 'Version has no datasets.');
 
@@ -175,19 +193,31 @@ class ImgCompressModelController extends Controller
             'training_finished_at' => null,
             'training_report' => null,
         ]);
+        $auditLogger->info('version_retry_queued', [
+            'model_version' => $modelVersion,
+            'message' => "Version v{$modelVersion->version_number} queued for retry.",
+        ]);
 
         return Redirect::back()->with('message', "Version {$modelVersion->version_number} queued for retry.");
     }
 
-    public function cancelVersion(ModelVersion $modelVersion, MLConnector $mlConnector)
+    public function cancelVersion(ModelVersion $modelVersion, MLConnector $mlConnector, MLAuditLogger $auditLogger)
     {
+        $auditLogger->info('version_cancel_requested', [
+            'model_version' => $modelVersion,
+            'message' => "Version v{$modelVersion->version_number} cancel requested.",
+        ]);
         $this->cancelActiveTraining($modelVersion, $mlConnector);
 
         return Redirect::back()->with('message', "Version {$modelVersion->version_number} training cancelled.");
     }
 
-    public function deleteVersion(ModelVersion $modelVersion, MLConnector $mlConnector)
+    public function deleteVersion(ModelVersion $modelVersion, MLConnector $mlConnector, MLAuditLogger $auditLogger)
     {
+        $auditLogger->info('version_delete_requested', [
+            'model_version' => $modelVersion,
+            'message' => "Version v{$modelVersion->version_number} delete requested.",
+        ]);
         $this->cancelActiveTraining($modelVersion, $mlConnector);
         $this->deleteVersionArtifacts($modelVersion);
 
@@ -196,11 +226,15 @@ class ImgCompressModelController extends Controller
         return Redirect::back()->with('message', 'Version deleted successfully.');
     }
 
-    public function deleteModel(ImgCompressModel $imgCompressModel, MLConnector $mlConnector)
+    public function deleteModel(ImgCompressModel $imgCompressModel, MLConnector $mlConnector, MLAuditLogger $auditLogger)
     {
         $imgCompressModel->load('versions');
 
         foreach ($imgCompressModel->versions as $version) {
+            $auditLogger->info('version_delete_requested', [
+                'model_version' => $version,
+                'message' => "Version v{$version->version_number} delete requested through model delete.",
+            ]);
             $this->cancelActiveTraining($version, $mlConnector);
             $this->deleteVersionArtifacts($version);
         }

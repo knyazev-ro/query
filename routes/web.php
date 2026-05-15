@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\DatasetController;
 use App\Http\Controllers\GraphController;
+use App\Http\Controllers\BenchmarkController;
 use App\Http\Controllers\CompressionController;
 use App\Http\Controllers\ImgCompressModelController;
 use App\Http\Controllers\ImgModelController;
 use App\Http\Controllers\MLDiagnosticsController;
+use App\Http\Controllers\MLAuditController;
 use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
@@ -62,6 +64,17 @@ Route::prefix('img-models')->name('img-models.')->group(function () {
 
 Route::middleware(['auth', 'verified'])->get('/ml-diagnostics', [MLDiagnosticsController::class, 'index'])
     ->name('ml-diagnostics.index');
+
+Route::middleware(['auth', 'verified'])->get('/ml-audit', [MLAuditController::class, 'index'])
+    ->name('ml-audit.index');
+
+Route::middleware(['auth', 'verified'])->prefix('benchmarks')->name('benchmarks.')->group(function () {
+    Route::get('/', [BenchmarkController::class, 'index'])->name('index');
+    Route::get('/create', [BenchmarkController::class, 'create'])->name('create');
+    Route::get('/show/{benchmark}', [BenchmarkController::class, 'show'])->name('show');
+    Route::post('/store', [BenchmarkController::class, 'store'])->name('store');
+    Route::post('/delete/{benchmark}', [BenchmarkController::class, 'destroy'])->name('delete');
+});
 
 Route::prefix('img-compress-models')->name('img-compress-models.')->group(function () {
     Route::get('/', [ImgCompressModelController::class, 'index'])->name('index');

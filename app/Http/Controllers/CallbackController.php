@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
 use App\Services\ImageAnalysisService;
+use App\Services\MLAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +25,11 @@ class CallbackController extends Controller
      * @return [type]
      * 
      */
-    public function compressionProcess(Request $request, ImageAnalysisService $imageAnalysis)
+    public function compressionProcess(
+        Request $request,
+        ImageAnalysisService $imageAnalysis,
+        MLAuditLogger $auditLogger,
+    )
     {
         $validated = $request->validate([
             'id' => 'required|integer|exists:img_media,id',
@@ -58,6 +63,17 @@ class CallbackController extends Controller
         }
 
         $imgMedia->update($updateData);
+        $auditLogger->record('compression_callback_received', $validated['status'] === 'error' ? 'error' : 'info', [
+            'img_media' => $imgMedia,
+            'model_version_id' => $imgMedia->model_version_id,
+            'status' => $validated['status'],
+            'message' => "Compression callback received with status {$validated['status']}.",
+            'context' => [
+                'compressed_path' => $validated['compressed_path'] ?? null,
+                'compressed_size' => $validated['compressed_size'] ?? null,
+                'has_quality_metrics' => ! empty($validated['quality_metrics']),
+            ],
+        ]);
 
         if ($validated['status'] === 'compressed') {
             try {
@@ -80,7 +96,7 @@ class CallbackController extends Controller
         ]);
     }
 
-    public function trainProcess(Request $request)
+    public function trainProcess(Request $request, MLAuditLogger $auditLogger)
     {
         $validated = $request->validate([
             'id' => 'required|integer',
@@ -99,6 +115,16 @@ class CallbackController extends Controller
         $modelVersion = ModelVersion::find($validated['id']);
 
         if ($modelVersion === null) {
+            $auditLogger->warning('train_callback_ignored', [
+                'model_version_id' => $validated['id'],
+                'status' => $validated['status'],
+                'message' => 'Training callback ignored because model version no longer exists.',
+                'context' => [
+                    'has_progress' => ! empty($validated['progress']),
+                    'has_quality_metrics' => ! empty($validated['quality_metrics']),
+                ],
+            ]);
+
             return response()->json([
                 'message' => 'Training callback ignored because model version no longer exists.',
             ]);
@@ -121,6 +147,16 @@ class CallbackController extends Controller
         }
 
         $modelVersion->update($updates);
+        $auditLogger->record('train_callback_received', $validated['status'] === 'error' ? 'error' : 'info', [
+            'model_version' => $modelVersion,
+            'status' => $validated['status'],
+            'message' => "Training callback received with status {$validated['status']}.",
+            'context' => [
+                'progress_percent' => $validated['progress']['percent'] ?? null,
+                'progress_message' => $validated['progress']['message'] ?? null,
+                'has_quality_metrics' => ! empty($validated['quality_metrics']),
+            ],
+        ]);
 
         return response()->json([
             'message' => 'Training status updated successfully.',

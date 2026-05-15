@@ -67,6 +67,7 @@ function formatMetric(value?: number | null, digits = 4) {
 
 export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
     const [heatmapRevision, setHeatmapRevision] = useState(0);
+    const [sliderPosition, setSliderPosition] = useState(50);
     const { data, setData, processing, errors } = useForm<ImageForm>({
         original_name: imgMedia.original_name,
     });
@@ -173,7 +174,66 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+                    <div className="space-y-5">
+                        {imgMedia.status === 'compressed' && (
+                            <div className="rounded-lg border border-white/10 bg-[#141414]">
+                                <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                                    <div className="text-xs font-medium text-gray-400">
+                                        Before / after
+                                    </div>
+                                    <div className="text-[10px] text-gray-600">
+                                        {sliderPosition}%
+                                    </div>
+                                </div>
+                                <div className="bg-[#101010] p-4">
+                                    <div className="relative mx-auto aspect-video max-h-[70vh] overflow-hidden rounded bg-black">
+                                        <img
+                                            src={route(
+                                                'compressions.original',
+                                                imgMedia.id,
+                                            )}
+                                            alt={imgMedia.original_name}
+                                            className="absolute inset-0 h-full w-full object-contain"
+                                        />
+                                        <div
+                                            className="absolute inset-0 overflow-hidden"
+                                            style={{
+                                                clipPath: `inset(0 ${100 - sliderPosition}% 0 0)`,
+                                            }}
+                                        >
+                                            <img
+                                                src={route(
+                                                    'compressions.decompressed',
+                                                    imgMedia.id,
+                                                )}
+                                                alt={`${imgMedia.original_name} decompressed`}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        </div>
+                                        <div
+                                            className="absolute top-0 bottom-0 w-px bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+                                            style={{
+                                                left: `${sliderPosition}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={100}
+                                        value={sliderPosition}
+                                        onChange={(event) =>
+                                            setSliderPosition(
+                                                Number(event.target.value),
+                                            )
+                                        }
+                                        className="mt-4 h-2 w-full accent-[#ff1b1c]"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
                         <div className="rounded-lg border border-white/10 bg-[#141414]">
                             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                                 <div className="text-xs font-medium text-gray-400">
@@ -287,6 +347,7 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                                     </div>
                                 )}
                             </div>
+                        </div>
                         </div>
                     </div>
 

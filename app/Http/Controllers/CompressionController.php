@@ -6,6 +6,7 @@ use App\Jobs\CompressJob;
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
 use App\Services\ImageAnalysisService;
+use App\Services\MLAuditLogger;
 use App\Services\MLConnector;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
@@ -163,7 +164,7 @@ class CompressionController extends Controller
         ];
     }
 
-    public function store(Request $request)
+    public function store(Request $request, MLAuditLogger $auditLogger)
     {
         $validated = $request->validate([
             'model_version_id' => [
@@ -185,6 +186,13 @@ class CompressionController extends Controller
             $modelVersion->id,
             $images->pluck('id')->all(),
         )->afterCommit();
+        $auditLogger->info('compression_batch_queued', [
+            'model_version' => $modelVersion,
+            'message' => "Compression batch queued for {$images->count()} images.",
+            'context' => [
+                'image_ids' => $images->pluck('id')->all(),
+            ],
+        ]);
 
         return $this->responseFor($request, [
             'message' => 'Images uploaded and queued for compression.',
@@ -213,11 +221,16 @@ class CompressionController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, ImgMedia $imgMedia)
+    public function destroy(Request $request, ImgMedia $imgMedia, MLAuditLogger $auditLogger)
     {
         $this->authorizeImage($imgMedia);
 
         $this->deleteImageFiles($imgMedia);
+        $auditLogger->info('compression_image_deleted', [
+            'img_media' => $imgMedia,
+            'model_version_id' => $imgMedia->model_version_id,
+            'message' => "Compression image {$imgMedia->original_name} deleted.",
+        ]);
         $imgMedia->delete();
 
         return $this->responseFor($request, [
@@ -225,7 +238,12 @@ class CompressionController extends Controller
         ]);
     }
 
-    public function cancel(Request $request, ModelVersion $modelVersion, MLConnector $mlConnector)
+    public function cancel(
+        Request $request,
+        ModelVersion $modelVersion,
+        MLConnector $mlConnector,
+        MLAuditLogger $auditLogger,
+    )
     {
         $validated = $request->validate([
             'image_ids' => 'nullable|array',
@@ -243,6 +261,14 @@ class CompressionController extends Controller
             ->get();
 
         if ($images->isEmpty()) {
+            $auditLogger->warning('compression_cancel_skipped', [
+                'model_version' => $modelVersion,
+                'message' => 'Compression cancel skipped because no active images were found.',
+                'context' => [
+                    'requested_image_ids' => $validated['image_ids'] ?? null,
+                ],
+            ]);
+
             return $this->responseFor($request, [
                 'message' => 'No active compression images found.',
                 'data' => [],
@@ -255,6 +281,14 @@ class CompressionController extends Controller
         $pendingImages->each->update([
             'status' => 'cancel',
             'errors' => '',
+        ]);
+        $auditLogger->info('compression_cancel_local', [
+            'model_version' => $modelVersion,
+            'message' => "Compression cancel requested for {$images->count()} images.",
+            'context' => [
+                'pending_image_ids' => $pendingImages->pluck('id')->all(),
+                'running_image_ids' => $runningImages->pluck('id')->all(),
+            ],
         ]);
 
         if ($runningImages->isNotEmpty()) {
@@ -269,7 +303,7 @@ class CompressionController extends Controller
         ]);
     }
 
-    public function retry(Request $request, ImgMedia $imgMedia)
+    public function retry(Request $request, ImgMedia $imgMedia, MLAuditLogger $auditLogger)
     {
         $this->authorizeImage($imgMedia);
 
@@ -287,6 +321,11 @@ class CompressionController extends Controller
             $imgMedia->model_version_id,
             [$imgMedia->id],
         )->afterCommit();
+        $auditLogger->info('compression_image_retried', [
+            'img_media' => $imgMedia,
+            'model_version_id' => $imgMedia->model_version_id,
+            'message' => "Compression retry queued for {$imgMedia->original_name}.",
+        ]);
 
         return $this->responseFor($request, [
             'message' => 'Image queued for compression retry.',
