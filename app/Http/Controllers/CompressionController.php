@@ -66,7 +66,13 @@ class CompressionController extends Controller
 
         abort_if($imgMedia->compressed_img_path === null || ! Storage::exists($imgMedia->compressed_img_path), 404);
 
-        return Storage::response($imgMedia->compressed_img_path, $imgMedia->original_name);
+        $baseName = $this->safeBaseName($imgMedia->original_name);
+
+        return Storage::response(
+            $imgMedia->compressed_img_path,
+            "{$baseName}-compressed.npz",
+            ['Content-Type' => 'application/octet-stream'],
+        );
     }
 
     public function decompressed(Request $request, ImgMedia $imgMedia, MLConnector $mlConnector)
@@ -89,8 +95,7 @@ class CompressionController extends Controller
         abort_if($bytes === false, 502);
 
         $mimeType = $image['mime_type'] ?? 'image/png';
-        $baseName = pathinfo($imgMedia->original_name, PATHINFO_FILENAME) ?: 'image';
-        $filename = str_replace('"', '', $baseName).'-decompressed.png';
+        $filename = $this->safeBaseName($imgMedia->original_name).'-decompressed.png';
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
         return response($bytes, 200, [
@@ -240,6 +245,13 @@ class CompressionController extends Controller
     private function authorizeImage(ImgMedia $imgMedia): void
     {
         abort_if($imgMedia->author_id !== Auth::id(), 404);
+    }
+
+    private function safeBaseName(string $filename): string
+    {
+        $baseName = pathinfo($filename, PATHINFO_FILENAME) ?: 'image';
+
+        return preg_replace('/[^A-Za-z0-9._-]+/', '_', $baseName) ?: 'image';
     }
 
     private function responseFor(Request $request, array $payload)
