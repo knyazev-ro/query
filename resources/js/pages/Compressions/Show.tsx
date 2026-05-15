@@ -8,7 +8,7 @@ import {
     TrashIcon,
 } from '@heroicons/react/16/solid';
 import { router, useForm } from '@inertiajs/react';
-import { FormEvent, useEffect } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { route } from 'ziggy-js';
 import type { ImgMedia } from './types';
 
@@ -49,6 +49,14 @@ function percentSaved(image: ImgMedia) {
     ).toFixed(1);
 }
 
+function sizeSavedPercent(size?: number | null, originalSize?: number | null) {
+    if (!size || !originalSize) {
+        return null;
+    }
+
+    return Math.max(100 - (size / originalSize) * 100, 0).toFixed(1);
+}
+
 function shortError(message?: string | null) {
     return (message ?? '').replace(/\s+/g, ' ').trim().slice(0, 1200);
 }
@@ -58,6 +66,7 @@ function formatMetric(value?: number | null, digits = 4) {
 }
 
 export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
+    const [heatmapRevision, setHeatmapRevision] = useState(0);
     const { data, setData, processing, errors } = useForm<ImageForm>({
         original_name: imgMedia.original_name,
     });
@@ -105,6 +114,14 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
     const saved = percentSaved(imgMedia);
     const isActive =
         imgMedia.status === 'just created' || imgMedia.status === 'compressing';
+    const heatmapSrc =
+        heatmapRevision > 0
+            ? route('compressions.heatmap', {
+                  imgMedia: imgMedia.id,
+                  refresh: 1,
+                  t: heatmapRevision,
+              })
+            : route('compressions.heatmap', imgMedia.id);
 
     useEffect(() => {
         if (!isActive) {
@@ -156,7 +173,7 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
                         <div className="rounded-lg border border-white/10 bg-[#141414]">
                             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                                 <div className="text-xs font-medium text-gray-400">
@@ -234,6 +251,39 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                                 ) : (
                                     <div className="px-6 text-center text-sm text-gray-500">
                                         Decompressed preview is not available yet
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg border border-white/10 bg-[#141414]">
+                            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                                <div className="text-xs font-medium text-gray-400">
+                                    Difference heatmap
+                                </div>
+                                {imgMedia.status === 'compressed' && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setHeatmapRevision(Date.now())
+                                        }
+                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                                        title="Refresh heatmap"
+                                    >
+                                        <ArrowPathIcon className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex min-h-[420px] items-center justify-center bg-[#101010]">
+                                {imgMedia.status === 'compressed' ? (
+                                    <img
+                                        src={heatmapSrc}
+                                        alt={`${imgMedia.original_name} difference heatmap`}
+                                        className="max-h-[70vh] max-w-full object-contain"
+                                    />
+                                ) : (
+                                    <div className="px-6 text-center text-sm text-gray-500">
+                                        Heatmap is not available yet
                                     </div>
                                 )}
                             </div>
@@ -345,6 +395,40 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                             </div>
                         )}
 
+                        {imgMedia.quality_metrics?.heatmap && (
+                            <div className="rounded-lg border border-white/10 bg-[#141414] p-4">
+                                <div className="mb-3 text-xs font-medium text-gray-400">
+                                    Heatmap errors
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div className="rounded bg-white/5 p-2 text-gray-500">
+                                        Mean
+                                        <div className="mt-1 text-gray-300">
+                                            {formatMetric(
+                                                imgMedia.quality_metrics
+                                                    .heatmap.mean_error,
+                                                6,
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="rounded bg-white/5 p-2 text-gray-500">
+                                        Max
+                                        <div className="mt-1 text-gray-300">
+                                            {formatMetric(
+                                                imgMedia.quality_metrics
+                                                    .heatmap.max_error,
+                                                6,
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {imgMedia.quality_metrics?.baselines && (
+                            <BaselineComparison image={imgMedia} />
+                        )}
+
                         {imgMedia.errors && (
                             <div className="rounded-lg border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-4">
                                 <div className="mb-2 text-xs font-semibold uppercase text-[#ff8b8c]">
@@ -392,5 +476,108 @@ export default function Show({ imgMedia }: { imgMedia: ImgMedia }) {
                 </div>
             </div>
         </Layout>
+    );
+}
+
+function BaselineComparison({ image }: { image: ImgMedia }) {
+    const baselines = image.quality_metrics?.baselines;
+    const rows = [
+        {
+            label: 'ML latent',
+            size: image.compressed_size,
+            saved: percentSaved(image),
+            psnr: image.quality_metrics?.psnr,
+            ssim: image.quality_metrics?.ssim,
+            mse: image.quality_metrics?.mse,
+            quality: '-',
+        },
+        baselines?.jpeg && {
+            label: 'JPEG',
+            size: baselines.jpeg.size,
+            saved: sizeSavedPercent(baselines.jpeg.size, image.original_size),
+            psnr: baselines.jpeg.psnr,
+            ssim: baselines.jpeg.ssim,
+            mse: baselines.jpeg.mse,
+            quality: `q${baselines.jpeg.quality}`,
+        },
+        baselines?.webp && {
+            label: 'WebP',
+            size: baselines.webp.size,
+            saved: sizeSavedPercent(baselines.webp.size, image.original_size),
+            psnr: baselines.webp.psnr,
+            ssim: baselines.webp.ssim,
+            mse: baselines.webp.mse,
+            quality: `q${baselines.webp.quality}`,
+        },
+    ].filter(Boolean) as Array<{
+        label: string;
+        size?: number | null;
+        saved?: string | null;
+        psnr?: number | null;
+        ssim?: number | null;
+        mse?: number | null;
+        quality: string;
+    }>;
+
+    return (
+        <div className="rounded-lg border border-white/10 bg-[#141414] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-xs font-medium text-gray-400">
+                    Baseline comparison
+                </div>
+                {baselines?.comparison_resolution && (
+                    <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-gray-500">
+                        {baselines.comparison_resolution}x
+                        {baselines.comparison_resolution}
+                    </span>
+                )}
+            </div>
+
+            <div className="overflow-hidden rounded border border-white/10">
+                <table className="w-full text-left text-[11px]">
+                    <thead className="bg-white/5 text-gray-500">
+                        <tr>
+                            <th className="px-2 py-2 font-medium">Codec</th>
+                            <th className="px-2 py-2 font-medium">Size</th>
+                            <th className="px-2 py-2 font-medium">PSNR</th>
+                            <th className="px-2 py-2 font-medium">SSIM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((row) => (
+                            <tr
+                                key={row.label}
+                                className="border-t border-white/10 text-gray-300"
+                            >
+                                <td className="px-2 py-2">
+                                    <div>{row.label}</div>
+                                    <div className="text-[10px] text-gray-600">
+                                        {row.quality}
+                                    </div>
+                                </td>
+                                <td className="px-2 py-2">
+                                    <div>{formatBytes(row.size)}</div>
+                                    <div className="text-[10px] text-gray-600">
+                                        {row.saved ? `${row.saved}%` : '-'}
+                                    </div>
+                                </td>
+                                <td className="px-2 py-2">
+                                    {formatMetric(row.psnr, 2)}
+                                </td>
+                                <td className="px-2 py-2">
+                                    {formatMetric(row.ssim)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {image.quality_metrics?.baseline_error && (
+                <div className="mt-3 rounded border border-amber-500/20 bg-amber-500/10 p-2 text-xs text-amber-300">
+                    {image.quality_metrics.baseline_error}
+                </div>
+            )}
+        </div>
     );
 }

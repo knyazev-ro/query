@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\CompressJob;
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
+use App\Services\ImageAnalysisService;
 use App\Services\MLConnector;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
@@ -48,6 +49,8 @@ class CompressionController extends Controller
         $this->authorizeImage($imgMedia);
 
         $imgMedia->load(['author', 'modelVersion.model']);
+        $this->ensureBaselineComparison($imgMedia);
+
         return Inertia::render('Compressions/Show', compact('imgMedia'));
     }
 
@@ -79,6 +82,55 @@ class CompressionController extends Controller
     {
         $this->authorizeImage($imgMedia);
 
+        $image = $this->decompressedImage($imgMedia, $mlConnector);
+        $bytes = $image['bytes'];
+
+        $filename = $this->safeBaseName($imgMedia->original_name).'-decompressed.png';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response($bytes, 200, [
+            'Content-Type' => $image['mime_type'],
+            'Content-Length' => (string) strlen($bytes),
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    public function heatmap(
+        Request $request,
+        ImgMedia $imgMedia,
+        MLConnector $mlConnector,
+        ImageAnalysisService $imageAnalysis,
+    ) {
+        $this->authorizeImage($imgMedia);
+
+        abort_if($imgMedia->status !== 'compressed', 404);
+
+        $heatmapPath = $imageAnalysis->heatmapPath($imgMedia);
+        if (! $request->boolean('refresh') && Storage::exists($heatmapPath)) {
+            return Storage::response($heatmapPath, $this->safeBaseName($imgMedia->original_name).'-heatmap.png', [
+                'Content-Type' => 'image/png',
+                'Cache-Control' => 'no-store',
+            ]);
+        }
+
+        $decompressed = $this->decompressedImage($imgMedia, $mlConnector);
+        $heatmap = $imageAnalysis->generateHeatmap($imgMedia, $decompressed['bytes']);
+        $metrics = $imgMedia->quality_metrics ?? [];
+        $metrics['heatmap'] = $heatmap;
+
+        $imgMedia->update([
+            'quality_metrics' => $metrics,
+        ]);
+
+        return Storage::response($heatmap['path'], $this->safeBaseName($imgMedia->original_name).'-heatmap.png', [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'no-store',
+        ]);
+    }
+
+    private function decompressedImage(ImgMedia $imgMedia, MLConnector $mlConnector): array
+    {
         abort_if($imgMedia->status !== 'compressed', 404);
         abort_if($imgMedia->modelVersion === null, 404);
         abort_if($imgMedia->compressed_img_path === null || ! Storage::exists($imgMedia->compressed_img_path), 404);
@@ -92,24 +144,23 @@ class CompressionController extends Controller
         abort_if(! is_array($image) || empty($image['file_base64']), 502);
 
         if (! empty($image['quality_metrics']) && is_array($image['quality_metrics'])) {
+            $metrics = [
+                ...($imgMedia->quality_metrics ?? []),
+                ...$image['quality_metrics'],
+            ];
             $imgMedia->update([
-                'quality_metrics' => $image['quality_metrics'],
+                'quality_metrics' => $metrics,
             ]);
         }
 
         $bytes = base64_decode($image['file_base64'], true);
         abort_if($bytes === false, 502);
 
-        $mimeType = $image['mime_type'] ?? 'image/png';
-        $filename = $this->safeBaseName($imgMedia->original_name).'-decompressed.png';
-        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
-
-        return response($bytes, 200, [
-            'Content-Type' => $mimeType,
-            'Content-Length' => (string) strlen($bytes),
-            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
-            'Cache-Control' => 'no-store',
-        ]);
+        return [
+            'bytes' => $bytes,
+            'mime_type' => $image['mime_type'] ?? 'image/png',
+            'size' => $image['size'] ?? strlen($bytes),
+        ];
     }
 
     public function store(Request $request)
@@ -230,6 +281,7 @@ class CompressionController extends Controller
             'errors' => '',
             'quality_metrics' => null,
         ]);
+        Storage::deleteDirectory("ml/analysis/img-media-{$imgMedia->id}");
 
         CompressJob::dispatch(
             $imgMedia->model_version_id,
@@ -270,6 +322,8 @@ class CompressionController extends Controller
         if ($imgMedia->compressed_img_path !== null) {
             Storage::delete($imgMedia->compressed_img_path);
         }
+
+        Storage::deleteDirectory("ml/analysis/img-media-{$imgMedia->id}");
     }
 
     private function authorizeImage(ImgMedia $imgMedia): void
@@ -287,5 +341,29 @@ class CompressionController extends Controller
     private function responseFor(Request $request, array $payload)
     {
         return Redirect::back()->with('message', $payload['message']);
+    }
+
+    private function ensureBaselineComparison(ImgMedia $imgMedia): void
+    {
+        if ($imgMedia->status !== 'compressed') {
+            return;
+        }
+
+        $imageAnalysis = app(ImageAnalysisService::class);
+        if ($imageAnalysis->hasBaselineComparison($imgMedia->quality_metrics)) {
+            return;
+        }
+
+        try {
+            $imgMedia->update([
+                'quality_metrics' => $imageAnalysis->appendBaselineComparison($imgMedia),
+            ]);
+        } catch (\Throwable $exception) {
+            $metrics = $imgMedia->quality_metrics ?? [];
+            $metrics['baseline_error'] = $exception->getMessage();
+            $imgMedia->update([
+                'quality_metrics' => $metrics,
+            ]);
+        }
     }
 }

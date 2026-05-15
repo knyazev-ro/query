@@ -25,6 +25,33 @@ export type QualityMetrics = {
     psnr?: number | null;
     ssim?: number | null;
     samples?: number | null;
+    baselines?: {
+        comparison_resolution?: number;
+        jpeg?: BaselineMetrics;
+        webp?: BaselineMetrics;
+    };
+    baseline_error?: string | null;
+    baseline_note?: string | null;
+    baseline_target_size?: number | null;
+    heatmap?: {
+        path?: string;
+        resolution?: number;
+        mean_error?: number;
+        max_error?: number;
+    };
+};
+
+export type BaselineMetrics = {
+    format: 'jpeg' | 'webp';
+    quality: number;
+    size: number;
+    target_size?: number | null;
+    target_distance?: number | null;
+    target_distance_percent?: number | null;
+    mse?: number | null;
+    psnr?: number | null;
+    ssim?: number | null;
+    samples?: number | null;
 };
 
 export type ImgMediaStatus =

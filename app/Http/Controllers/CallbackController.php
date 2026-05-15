@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
+use App\Services\ImageAnalysisService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class CallbackController extends Controller
      * @return [type]
      * 
      */
-    public function compressionProcess(Request $request)
+    public function compressionProcess(Request $request, ImageAnalysisService $imageAnalysis)
     {
         $validated = $request->validate([
             'id' => 'required|integer|exists:img_media,id',
@@ -57,6 +58,21 @@ class CallbackController extends Controller
         }
 
         $imgMedia->update($updateData);
+
+        if ($validated['status'] === 'compressed') {
+            try {
+                $imgMedia = $imgMedia->fresh(['modelVersion']);
+                $imgMedia->update([
+                    'quality_metrics' => $imageAnalysis->appendBaselineComparison($imgMedia),
+                ]);
+            } catch (\Throwable $exception) {
+                $metrics = $imgMedia->quality_metrics ?? [];
+                $metrics['baseline_error'] = $exception->getMessage();
+                $imgMedia->update([
+                    'quality_metrics' => $metrics,
+                ]);
+            }
+        }
 
         return response()->json([
             'message' => 'Compression status updated successfully.',
