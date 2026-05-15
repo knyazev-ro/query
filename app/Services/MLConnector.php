@@ -27,9 +27,15 @@ class MLConnector
     public function train(ModelVersion $modelVersion)
     {
         try {
+            $startedAt = now();
+            $modelVersion->loadMissing(['datasets', 'model']);
+
             $modelVersion->update([
                 'status' => 'run',
                 'errors' => null,
+                'training_started_at' => $startedAt,
+                'training_finished_at' => null,
+                'training_report' => $this->initialTrainingReport($modelVersion, $startedAt),
             ]);
 
             return $this->postJson('/train', [
@@ -44,6 +50,11 @@ class MLConnector
 
             throw $exception;
         }
+    }
+
+    public function healthcheck(): array
+    {
+        return $this->getJson('/healthcheck');
     }
 
     /**
@@ -145,6 +156,25 @@ class MLConnector
         return json_decode($body, true, flags: JSON_THROW_ON_ERROR);
     }
 
+    private function getJson(string $uri): array
+    {
+        $response = $this->client->get($uri, [
+            'headers' => [
+                'Accept' => 'application/json',
+            ],
+        ]);
+
+        $body = (string) $response->getBody();
+
+        if ($body === '') {
+            return [
+                'status_code' => $response->getStatusCode(),
+            ];
+        }
+
+        return json_decode($body, true, flags: JSON_THROW_ON_ERROR);
+    }
+
     private function callbackUrl(string $routeName): string
     {
         $baseUrl = trim((string) config('services.img_compress_ml.callback_base_url', ''));
@@ -167,6 +197,53 @@ class MLConnector
             ->all();
 
         return $payload;
+    }
+
+    private function initialTrainingReport(ModelVersion $modelVersion, $startedAt): array
+    {
+        return [
+            'status' => 'run',
+            'started_at' => $startedAt->toISOString(),
+            'finished_at' => null,
+            'duration_seconds' => null,
+            'parameters' => [
+                'image_resolution' => $modelVersion->image_resolution,
+                'train_epochs' => config('services.img_compress_ml.train_epochs'),
+                'train_batch_size' => config('services.img_compress_ml.train_batch_size'),
+            ],
+            'model' => [
+                'id' => $modelVersion->img_compress_model_id,
+                'name' => $modelVersion->model?->name,
+                'version_number' => $modelVersion->version_number,
+                'parent_version_id' => $modelVersion->parent_version_id,
+            ],
+            'datasets' => $modelVersion->datasets
+                ->map(fn ($dataset) => [
+                    'id' => $dataset->id,
+                    'name' => $dataset->name,
+                    'images_count' => $dataset->images_count,
+                    'image_resolution' => $dataset->image_resolution,
+                    'train_split' => $dataset->train_split,
+                    'test_split' => $dataset->test_split,
+                    'profile' => $dataset->profile,
+                ])
+                ->values()
+                ->all(),
+            'ml_service' => $this->safeHealthcheck(),
+            'loss_history' => [],
+            'latest_progress' => null,
+            'quality_metrics' => null,
+            'errors' => null,
+        ];
+    }
+
+    private function safeHealthcheck(): ?array
+    {
+        try {
+            return $this->healthcheck();
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function imagesPayload(Collection $imgMedia, string $pathAttribute, bool $includeOriginal = false): array

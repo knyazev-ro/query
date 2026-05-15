@@ -11,6 +11,7 @@ import Model from './SidebarComponents/Model';
 import Kanban from './SidebarComponents/Kanban';
 import Dataset from './SidebarComponents/Dataset';
 import Compression from './SidebarComponents/Compression';
+import MLDiagnostics from './SidebarComponents/MLDiagnostics';
 import Messages from './SidebarComponents/Messages';
 import Notifications from './SidebarComponents/Notifications';
 import Settings from './SidebarComponents/Settings';
@@ -28,6 +29,7 @@ export default function Sidebar() {
         { component: Model },
         { component: Dataset },
         { component: Compression },
+        { component: MLDiagnostics },
         { component: ImgModel },
     ];
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\GraphController;
 use App\Http\Controllers\CompressionController;
 use App\Http\Controllers\ImgCompressModelController;
 use App\Http\Controllers\ImgModelController;
+use App\Http\Controllers\MLDiagnosticsController;
 use App\Http\Controllers\MessagerController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PipelineController;
@@ -59,6 +60,9 @@ Route::prefix('img-models')->name('img-models.')->group(function () {
     Route::get('/', [ImgModelController::class, 'index'])->name('index');
 });
 
+Route::middleware(['auth', 'verified'])->get('/ml-diagnostics', [MLDiagnosticsController::class, 'index'])
+    ->name('ml-diagnostics.index');
+
 Route::prefix('img-compress-models')->name('img-compress-models.')->group(function () {
     Route::get('/', [ImgCompressModelController::class, 'index'])->name('index');
     Route::get('/create', [ImgCompressModelController::class, 'createModel'])->name('create');
@@ -69,6 +73,7 @@ Route::prefix('img-compress-models')->name('img-compress-models.')->group(functi
     Route::get('/versions/{imgCompressModel}/edit', [ImgCompressModelController::class, 'editVersion'])->name('versions.edit');
     Route::post('/versions/from/{modelVersion?}', [ImgCompressModelController::class, 'createNewVersionFrom'])->name('versions.store');
     Route::post('/versions/update/{modelVersion}', [ImgCompressModelController::class, 'updateVersion'])->name('versions.update');
+    Route::post('/versions/cancel/{modelVersion}', [ImgCompressModelController::class, 'cancelVersion'])->name('versions.cancel');
     Route::post('/versions/retry/{modelVersion}', [ImgCompressModelController::class, 'retryVersion'])->name('versions.retry');
     Route::post('/versions/delete/{modelVersion}', [ImgCompressModelController::class, 'deleteVersion'])->name('versions.delete');
 });

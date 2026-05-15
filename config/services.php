@@ -39,6 +39,8 @@ return [
         'url' => env('IMG_COMPRESS_ML_URL', 'http://127.0.0.1:8001'),
         'timeout' => env('IMG_COMPRESS_ML_TIMEOUT', 60),
         'callback_base_url' => env('IMG_COMPRESS_CALLBACK_BASE_URL'),
+        'train_epochs' => env('IMG_COMPRESS_TRAIN_EPOCHS', 250),
+        'train_batch_size' => env('IMG_COMPRESS_TRAIN_BATCH_SIZE', 32),
     ],
 
 ];

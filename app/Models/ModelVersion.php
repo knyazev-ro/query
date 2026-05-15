@@ -20,6 +20,9 @@ class ModelVersion extends Model
         'errors', // long text TEXT
         'progress',
         'quality_metrics',
+        'training_started_at',
+        'training_finished_at',
+        'training_report',
     ];
 
     protected $casts = [
@@ -30,6 +33,9 @@ class ModelVersion extends Model
         'author_id' => 'integer',
         'progress' => 'array',
         'quality_metrics' => 'array',
+        'training_started_at' => 'datetime',
+        'training_finished_at' => 'datetime',
+        'training_report' => 'array',
     ];
 
     protected static function booted(): void
@@ -67,6 +73,11 @@ class ModelVersion extends Model
         return $this->belongsToMany(Dataset::class, 'version_datasets')
             ->using(VersionDataset::class)
             ->withTimestamps();
+    }
+
+    public function imgMedia(): HasMany
+    {
+        return $this->hasMany(ImgMedia::class, 'model_version_id');
     }
 
     public function author(): BelongsTo

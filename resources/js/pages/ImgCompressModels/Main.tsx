@@ -4,6 +4,7 @@ import {
     Cog6ToothIcon,
     CubeIcon,
     PlusIcon,
+    StopIcon,
     TrashIcon,
 } from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
@@ -21,6 +22,15 @@ const statusClass: Record<string, string> = {
 
 function formatMetric(value?: number | null, digits = 4) {
     return typeof value === 'number' ? value.toFixed(digits) : '-';
+}
+
+function versionMetrics(version: ImgCompressModel['latest_version']) {
+    return (
+        version?.quality_metrics ??
+        version?.training_report?.quality_metrics ??
+        version?.progress?.quality_metrics ??
+        null
+    );
 }
 
 export default function Main({ models }: { models: PaginatedModels }) {
@@ -58,6 +68,14 @@ export default function Main({ models }: { models: PaginatedModels }) {
     const retryVersion = (versionId: number) => {
         router.post(
             route('img-compress-models.versions.retry', versionId),
+            {},
+            { preserveScroll: true },
+        );
+    };
+
+    const cancelVersion = (versionId: number) => {
+        router.post(
+            route('img-compress-models.versions.cancel', versionId),
             {},
             { preserveScroll: true },
         );
@@ -224,9 +242,7 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                                     ))}
                                             </div>
 
-                                            {(version.quality_metrics ??
-                                                version.progress
-                                                    ?.quality_metrics) && (
+                                            {versionMetrics(version) && (
                                                 <div className="mt-3 grid grid-cols-3 gap-1 text-[10px]">
                                                     {[
                                                         ['PSNR', 'psnr', 2],
@@ -239,10 +255,9 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                                             digits,
                                                         ]) => {
                                                             const metrics =
-                                                                version.quality_metrics ??
-                                                                version
-                                                                    .progress
-                                                                    ?.quality_metrics;
+                                                                versionMetrics(
+                                                                    version,
+                                                                );
 
                                                             return (
                                                                 <div
@@ -328,6 +343,24 @@ export default function Main({ models }: { models: PaginatedModels }) {
                                                 <ArrowPathIcon className="h-4 w-4" />
                                             </button>
                                         )}
+
+                                        {version &&
+                                            ['queue', 'run'].includes(
+                                                version.status,
+                                            ) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        cancelVersion(
+                                                            version.id,
+                                                        )
+                                                    }
+                                                    className="grid h-8 w-8 place-items-center rounded border border-amber-500/30 text-amber-300 transition hover:bg-amber-500/10"
+                                                    title="Cancel training"
+                                                >
+                                                    <StopIcon className="h-4 w-4" />
+                                                </button>
+                                            )}
                                     </div>
                                 </div>
                             );

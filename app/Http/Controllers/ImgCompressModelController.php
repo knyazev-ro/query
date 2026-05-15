@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Dataset;
 use App\Models\ImgCompressModel;
 use App\Models\ModelVersion;
+use App\Services\MLConnector;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -40,7 +42,7 @@ class ImgCompressModelController extends Controller
     public function createModel()
     {
         $datasets = Dataset::query()
-            ->select('id', 'name', 'image_resolution', 'images_count')
+            ->select('id', 'name', 'image_resolution', 'images_count', 'train_split', 'test_split', 'profile')
             ->latest()
             ->get();
 
@@ -85,11 +87,15 @@ class ImgCompressModelController extends Controller
     public function editVersion(ImgCompressModel $imgCompressModel)
     {
         $imgCompressModel->load([
-            'versions' => fn($query) => $query->with(['parentVersion', 'datasets'])->orderBy('version_number'),
+            'versions' => fn($query) => $query
+                ->with(['parentVersion', 'datasets', 'imgMedia'])
+                ->orderBy('version_number'),
         ]);
 
+        $this->appendVersionExperimentStats($imgCompressModel->versions);
+
         $datasets = Dataset::query()
-            ->select('id', 'name', 'image_resolution', 'images_count')
+            ->select('id', 'name', 'image_resolution', 'images_count', 'train_split', 'test_split', 'profile')
             ->latest()
             ->get();
 
@@ -165,23 +171,94 @@ class ImgCompressModelController extends Controller
             'errors' => null,
             'progress' => null,
             'quality_metrics' => null,
+            'training_started_at' => null,
+            'training_finished_at' => null,
+            'training_report' => null,
         ]);
 
         return Redirect::back()->with('message', "Version {$modelVersion->version_number} queued for retry.");
     }
 
-    public function deleteVersion(ModelVersion $modelVersion)
+    public function cancelVersion(ModelVersion $modelVersion, MLConnector $mlConnector)
     {
+        $this->cancelActiveTraining($modelVersion, $mlConnector);
+
+        return Redirect::back()->with('message', "Version {$modelVersion->version_number} training cancelled.");
+    }
+
+    public function deleteVersion(ModelVersion $modelVersion, MLConnector $mlConnector)
+    {
+        $this->cancelActiveTraining($modelVersion, $mlConnector);
+        $this->deleteVersionArtifacts($modelVersion);
+
         $modelVersion->delete();
 
         return Redirect::back()->with('message', 'Version deleted successfully.');
     }
 
-    public function deleteModel(ImgCompressModel $imgCompressModel)
+    public function deleteModel(ImgCompressModel $imgCompressModel, MLConnector $mlConnector)
     {
+        $imgCompressModel->load('versions');
+
+        foreach ($imgCompressModel->versions as $version) {
+            $this->cancelActiveTraining($version, $mlConnector);
+            $this->deleteVersionArtifacts($version);
+        }
+
         $imgCompressModel->delete();
 
         return Redirect::back()->with('message', 'Image compression model deleted successfully.');
+    }
+
+    private function cancelActiveTraining(ModelVersion $modelVersion, MLConnector $mlConnector): void
+    {
+        if ($modelVersion->status === 'run') {
+            $mlConnector->cancelTrain($modelVersion);
+            return;
+        }
+
+        if ($modelVersion->status === 'queue') {
+            $modelVersion->update([
+                'status' => 'cancel',
+                'errors' => null,
+            ]);
+        }
+    }
+
+    private function deleteVersionArtifacts(ModelVersion $modelVersion): void
+    {
+        Storage::deleteDirectory("ml/models/model-version-{$modelVersion->id}");
+    }
+
+    private function appendVersionExperimentStats($versions): void
+    {
+        $versions->each(function (ModelVersion $version): void {
+            $images = $version->imgMedia;
+            $compressed = $images->where('status', 'compressed');
+            $originalSize = (int) $compressed->sum('original_size');
+            $compressedSize = (int) $compressed->sum('compressed_size');
+            $metrics = $compressed
+                ->pluck('quality_metrics')
+                ->filter(fn ($value) => is_array($value));
+
+            $averageMetric = fn (string $key) => $metrics
+                ->map(fn (array $metric) => $metric[$key] ?? null)
+                ->filter(fn ($value) => is_numeric($value))
+                ->avg();
+
+            $version->setAttribute('compression_stats', [
+                'images_count' => $images->count(),
+                'compressed_count' => $compressed->count(),
+                'original_size' => $originalSize,
+                'compressed_size' => $compressedSize,
+                'compression_ratio' => $originalSize > 0 ? round($compressedSize / $originalSize, 6) : null,
+                'saved_percent' => $originalSize > 0 ? round(100 - ($compressedSize / $originalSize * 100), 2) : null,
+                'avg_psnr' => $averageMetric('psnr'),
+                'avg_ssim' => $averageMetric('ssim'),
+                'avg_mse' => $averageMetric('mse'),
+            ]);
+            $version->unsetRelation('imgMedia');
+        });
     }
 
     private function modelRules(): array

@@ -4,9 +4,11 @@ import {
     ArrowPathIcon,
     CheckIcon,
     PlusIcon,
+    StopIcon,
     TrashIcon,
 } from '@heroicons/react/16/solid';
 import { router, useForm } from '@inertiajs/react';
+import { GitBranchIcon } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import type { Dataset, ImgCompressModel, ModelVersion } from './types';
 import VersionGraph from './VersionGraph';
@@ -28,6 +30,48 @@ type ModelForm = {
 function formatMetric(value?: number | null, digits = 4) {
     return typeof value === 'number' ? value.toFixed(digits) : '-';
 }
+
+function formatBytes(bytes?: number | null) {
+    if (!bytes) {
+        return '-';
+    }
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const index = Math.min(
+        Math.floor(Math.log(bytes) / Math.log(1024)),
+        units.length - 1,
+    );
+
+    return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatDuration(seconds?: number | null) {
+    if (!seconds) {
+        return '-';
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const rest = Math.round(seconds % 60);
+
+    return minutes > 0 ? `${minutes}m ${rest}s` : `${rest}s`;
+}
+
+function versionMetrics(version?: ModelVersion | null) {
+    return (
+        version?.quality_metrics ??
+        version?.training_report?.quality_metrics ??
+        version?.progress?.quality_metrics ??
+        null
+    );
+}
+
+const statusClass: Record<string, string> = {
+    queue: 'bg-white/5 text-gray-400',
+    run: 'bg-amber-500/10 text-amber-300',
+    ready: 'bg-emerald-500/10 text-emerald-300',
+    cancel: 'bg-zinc-500/10 text-zinc-400',
+    error: 'bg-[#ff1b1c]/10 text-[#ff6b6c]',
+};
 
 export default function EditVersion({
     imgCompressModel,
@@ -147,7 +191,12 @@ export default function EditVersion({
     };
 
     const deleteVersion = (version: ModelVersion) => {
-        if (!confirm(`Delete version v${version.version_number}?`)) {
+        const active = ['queue', 'run'].includes(version.status);
+        const message = active
+            ? `Cancel training and delete version v${version.version_number}?`
+            : `Delete version v${version.version_number}?`;
+
+        if (!confirm(message)) {
             return;
         }
 
@@ -161,6 +210,14 @@ export default function EditVersion({
     const retryVersion = (version: ModelVersion) => {
         router.post(
             route('img-compress-models.versions.retry', version.id),
+            {},
+            { preserveScroll: true },
+        );
+    };
+
+    const cancelVersion = (version: ModelVersion) => {
+        router.post(
+            route('img-compress-models.versions.cancel', version.id),
             {},
             { preserveScroll: true },
         );
@@ -234,10 +291,70 @@ export default function EditVersion({
                     </button>
                 </form>
 
-                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[420px_minmax(0,1fr)_360px]">
+                <ExperimentTable
+                    versions={versions}
+                    selectedVersionId={selectedVersionId}
+                    onSelect={selectVersion}
+                />
+
+                <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)_360px]">
                     <div>
                         <div className="mb-3 text-xs font-medium text-gray-400">
-                            Version tree
+                            Versions
+                        </div>
+
+                        <div className="mb-5 space-y-2">
+                            {versions.map((version) => (
+                                <button
+                                    key={version.id}
+                                    type="button"
+                                    onClick={() => selectVersion(version)}
+                                    className={`w-full rounded border p-3 text-left transition ${
+                                        selectedVersion?.id === version.id
+                                            ? 'border-[#ff1b1c]/70 bg-[#ff1b1c]/10'
+                                            : 'border-white/10 bg-[#141414] hover:bg-white/5'
+                                    }`}
+                                >
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <span className="flex items-center gap-1.5 text-sm font-medium text-gray-200">
+                                            <GitBranchIcon className="h-4 w-4" />
+                                            v{version.version_number}
+                                        </span>
+                                        <span
+                                            className={`rounded px-2 py-0.5 text-[10px] ${statusClass[version.status]}`}
+                                        >
+                                            {version.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <div className="text-[11px] text-gray-500">
+                                                parent:{' '}
+                                                {version.parent_version_id
+                                                    ? `#${version.parent_version_id}`
+                                                    : 'none'}
+                                            </div>
+                                            <div className="mt-1 text-[11px] text-gray-500">
+                                                {version.datasets.length}{' '}
+                                                datasets
+                                            </div>
+                                        </div>
+
+                                        {['queue', 'run'].includes(
+                                            version.status,
+                                        ) && (
+                                            <span className="grid h-8 w-8 place-items-center rounded border border-amber-500/30 text-amber-300">
+                                                <StopIcon className="h-4 w-4" />
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="mb-3 text-xs font-medium text-gray-400">
+                            Graph overview
                         </div>
 
                         <VersionGraph
@@ -262,6 +379,21 @@ export default function EditVersion({
 
                             {selectedVersion && (
                                 <div className="flex items-center gap-2">
+                                    {['queue', 'run'].includes(
+                                        selectedVersion.status,
+                                    ) && (
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                cancelVersion(selectedVersion)
+                                            }
+                                            className="inline-flex h-9 items-center gap-2 rounded border border-amber-500/30 px-3 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/10"
+                                        >
+                                            <StopIcon className="h-4 w-4" />
+                                            Cancel
+                                        </button>
+                                    )}
+
                                     {selectedVersion.status === 'error' && (
                                         <button
                                             type="button"
@@ -345,9 +477,7 @@ export default function EditVersion({
                                     }
                                 />
 
-                                {(selectedVersion.quality_metrics ??
-                                    selectedVersion.progress
-                                        ?.quality_metrics) && (
+                                {versionMetrics(selectedVersion) && (
                                     <div className="rounded border border-white/10 bg-[#141414] p-4">
                                         <div className="mb-3 text-xs font-medium text-gray-400">
                                             Quality
@@ -356,11 +486,8 @@ export default function EditVersion({
                                             <MetricBox
                                                 label="PSNR"
                                                 value={formatMetric(
-                                                    (
-                                                        selectedVersion.quality_metrics ??
-                                                        selectedVersion
-                                                            .progress
-                                                            ?.quality_metrics
+                                                    versionMetrics(
+                                                        selectedVersion,
                                                     )?.psnr,
                                                     2,
                                                 )}
@@ -368,28 +495,28 @@ export default function EditVersion({
                                             <MetricBox
                                                 label="SSIM"
                                                 value={formatMetric(
-                                                    (
-                                                        selectedVersion.quality_metrics ??
-                                                        selectedVersion
-                                                            .progress
-                                                            ?.quality_metrics
+                                                    versionMetrics(
+                                                        selectedVersion,
                                                     )?.ssim,
                                                 )}
                                             />
                                             <MetricBox
                                                 label="MSE"
                                                 value={formatMetric(
-                                                    (
-                                                        selectedVersion.quality_metrics ??
-                                                        selectedVersion
-                                                            .progress
-                                                            ?.quality_metrics
+                                                    versionMetrics(
+                                                        selectedVersion,
                                                     )?.mse,
                                                     6,
                                                 )}
                                             />
                                         </div>
                                     </div>
+                                )}
+
+                                {selectedVersion.training_report && (
+                                    <TrainingReportPanel
+                                        version={selectedVersion}
+                                    />
                                 )}
 
                                 {selectedVersion.status === 'error' &&
@@ -501,6 +628,225 @@ export default function EditVersion({
     );
 }
 
+function ExperimentTable({
+    versions,
+    selectedVersionId,
+    onSelect,
+}: {
+    versions: ModelVersion[];
+    selectedVersionId: number | null;
+    onSelect: (version: ModelVersion) => void;
+}) {
+    return (
+        <div className="mb-5 rounded border border-white/10 bg-[#141414]">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                <div>
+                    <div className="text-xs font-medium text-gray-400">
+                        Experiment comparison
+                    </div>
+                    <div className="mt-1 text-[11px] text-gray-600">
+                        Versions, quality, compression and training report
+                    </div>
+                </div>
+                <div className="text-[11px] text-gray-500">
+                    {versions.length} versions
+                </div>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-xs">
+                    <thead className="text-gray-500">
+                        <tr className="border-b border-white/10">
+                            <th className="px-4 py-3 font-medium">Version</th>
+                            <th className="px-4 py-3 font-medium">Datasets</th>
+                            <th className="px-4 py-3 font-medium">Quality</th>
+                            <th className="px-4 py-3 font-medium">Compression</th>
+                            <th className="px-4 py-3 font-medium">Training</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {versions.map((version) => {
+                            const metrics = versionMetrics(version);
+                            const stats = version.compression_stats;
+                            const selected = selectedVersionId === version.id;
+
+                            return (
+                                <tr
+                                    key={version.id}
+                                    onClick={() => onSelect(version)}
+                                    className={`cursor-pointer border-b border-white/5 transition last:border-b-0 ${
+                                        selected
+                                            ? 'bg-[#ff1b1c]/10'
+                                            : 'hover:bg-white/5'
+                                    }`}
+                                >
+                                    <td className="px-4 py-3 align-top">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-200">
+                                                v{version.version_number}
+                                            </span>
+                                            <span
+                                                className={`rounded px-2 py-0.5 text-[10px] ${statusClass[version.status]}`}
+                                            >
+                                                {version.status}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 text-gray-600">
+                                            {version.image_resolution}x
+                                            {version.image_resolution}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 align-top text-gray-400">
+                                        <div>{version.datasets.length} linked</div>
+                                        <div className="mt-1 text-gray-600">
+                                            {version.datasets
+                                                .map((dataset) => dataset.images_count)
+                                                .reduce((sum, count) => sum + count, 0)
+                                                .toLocaleString()}{' '}
+                                            images
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                        <div className="grid min-w-52 grid-cols-3 gap-1">
+                                            <TinyMetric
+                                                label="PSNR"
+                                                value={formatMetric(metrics?.psnr, 2)}
+                                            />
+                                            <TinyMetric
+                                                label="SSIM"
+                                                value={formatMetric(metrics?.ssim)}
+                                            />
+                                            <TinyMetric
+                                                label="MSE"
+                                                value={formatMetric(metrics?.mse, 6)}
+                                            />
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                        <div className="text-gray-300">
+                                            {stats?.saved_percent != null
+                                                ? `${stats.saved_percent.toFixed(1)}% saved`
+                                                : '-'}
+                                        </div>
+                                        <div className="mt-1 text-gray-600">
+                                            {formatBytes(stats?.compressed_size)} /{' '}
+                                            {formatBytes(stats?.original_size)}
+                                        </div>
+                                        <div className="mt-1 text-gray-600">
+                                            {stats?.compressed_count ?? 0}/
+                                            {stats?.images_count ?? 0} images
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 align-top">
+                                        <div className="text-gray-300">
+                                            {formatDuration(
+                                                version.training_report
+                                                    ?.duration_seconds,
+                                            )}
+                                        </div>
+                                        <div className="mt-1 text-gray-600">
+                                            {version.training_started_at
+                                                ? new Date(
+                                                      version.training_started_at,
+                                                  ).toLocaleDateString()
+                                                : '-'}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+function TrainingReportPanel({ version }: { version: ModelVersion }) {
+    const report = version.training_report;
+    const progress = report?.latest_progress ?? version.progress;
+    const metrics = versionMetrics(version);
+    const mlService = report?.ml_service ?? {};
+    const device = String(mlService?.device ?? '-');
+    const torchVersion = String(mlService?.torch_version ?? '-');
+
+    if (!report) {
+        return null;
+    }
+
+    return (
+        <div className="rounded border border-white/10 bg-[#141414] p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="text-xs font-medium text-gray-400">
+                    Training report
+                </div>
+                <span className={`rounded px-2 py-0.5 text-[10px] ${statusClass[version.status]}`}>
+                    {version.status}
+                </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+                <ReportStat
+                    label="duration"
+                    value={formatDuration(report.duration_seconds)}
+                />
+                <ReportStat label="device" value={device} />
+                <ReportStat label="torch" value={torchVersion} />
+                <ReportStat
+                    label="samples"
+                    value={`${metrics?.samples ?? '-'}`}
+                />
+            </div>
+
+            {progress && (
+                <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between text-[11px] text-gray-500">
+                        <span>{progress.message ?? 'Training progress'}</span>
+                        <span>{Math.round(progress.percent ?? 0)}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded bg-white/10">
+                        <div
+                            className="h-full rounded bg-amber-400"
+                            style={{
+                                width: `${Math.min(
+                                    Math.max(progress.percent ?? 0, 0),
+                                    100,
+                                )}%`,
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <LossChart history={report.loss_history ?? []} />
+
+            <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                {(report.datasets ?? []).map((dataset) => (
+                    <div
+                        key={dataset.id}
+                        className="rounded border border-white/10 bg-[#101010] p-3"
+                    >
+                        <div className="truncate text-xs font-medium text-gray-300">
+                            {dataset.name}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1 text-[10px] text-gray-400">
+                            <span className="rounded bg-white/5 px-2 py-0.5">
+                                {dataset.images_count} img
+                            </span>
+                            <span className="rounded bg-white/5 px-2 py-0.5">
+                                train {dataset.train_split ?? '-'}%
+                            </span>
+                            <span className="rounded bg-white/5 px-2 py-0.5">
+                                test {dataset.test_split ?? '-'}%
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 function DatasetPicker({
     datasets,
     selectedIds,
@@ -569,6 +915,98 @@ function MetricBox({ label, value }: { label: string; value: string }) {
         <div className="rounded bg-white/5 p-2 text-gray-500">
             {label}
             <div className="mt-1 text-gray-300">{value}</div>
+        </div>
+    );
+}
+
+function TinyMetric({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded bg-white/5 px-2 py-1 text-gray-500">
+            {label}
+            <div className="mt-0.5 text-gray-300">{value}</div>
+        </div>
+    );
+}
+
+function ReportStat({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded bg-white/5 p-2 text-gray-500">
+            {label}
+            <div className="mt-1 truncate text-gray-300">{value}</div>
+        </div>
+    );
+}
+
+function LossChart({
+    history,
+}: {
+    history: Array<{
+        percent?: number | null;
+        losses?: Record<string, number>;
+    }>;
+}) {
+    const points = history
+        .map((point, index) => {
+            const losses = point.losses ?? {};
+            const value =
+                losses.autoencoder ??
+                losses.reconstruction ??
+                Object.values(losses)[0];
+
+            return typeof value === 'number'
+                ? { x: point.percent ?? index, y: value }
+                : null;
+        })
+        .filter(Boolean) as Array<{ x: number; y: number }>;
+
+    if (points.length < 2) {
+        return (
+            <div className="mt-4 rounded border border-dashed border-white/10 p-4 text-xs text-gray-600">
+                Loss history is not available yet
+            </div>
+        );
+    }
+
+    const width = 420;
+    const height = 120;
+    const padding = 12;
+    const minX = Math.min(...points.map((point) => point.x));
+    const maxX = Math.max(...points.map((point) => point.x));
+    const minY = Math.min(...points.map((point) => point.y));
+    const maxY = Math.max(...points.map((point) => point.y));
+    const spanX = maxX - minX || 1;
+    const spanY = maxY - minY || 1;
+    const path = points
+        .map((point) => {
+            const x = padding + ((point.x - minX) / spanX) * (width - padding * 2);
+            const y =
+                height -
+                padding -
+                ((point.y - minY) / spanY) * (height - padding * 2);
+
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(' ');
+
+    return (
+        <div className="mt-4 rounded border border-white/10 bg-[#101010] p-3">
+            <div className="mb-2 flex items-center justify-between text-[11px] text-gray-500">
+                <span>loss curve</span>
+                <span>{points.length} points</span>
+            </div>
+            <svg
+                viewBox={`0 0 ${width} ${height}`}
+                className="h-32 w-full overflow-visible"
+                preserveAspectRatio="none"
+            >
+                <polyline
+                    points={path}
+                    fill="none"
+                    stroke="#ff1b1c"
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
+                />
+            </svg>
         </div>
     );
 }

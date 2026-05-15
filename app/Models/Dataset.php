@@ -26,6 +26,7 @@ class Dataset extends Model
         'test_split',
         'images_count',
         'uses_count',
+        'profile',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Dataset extends Model
         'test_split' => 'integer',
         'images_count' => 'integer',
         'uses_count' => 'integer',
+        'profile' => 'array',
     ];
 
     public function author(): BelongsTo

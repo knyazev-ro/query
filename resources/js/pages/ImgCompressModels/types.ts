@@ -8,6 +8,25 @@ export type Dataset = {
     name: string;
     image_resolution: number;
     images_count: number;
+    train_split?: number;
+    test_split?: number;
+    profile?: DatasetProfile | null;
+};
+
+export type DatasetProfile = {
+    images_count?: number;
+    supported_files_count?: number;
+    broken_files_count?: number;
+    empty_directories_count?: number;
+    min_width?: number | null;
+    min_height?: number | null;
+    max_width?: number | null;
+    max_height?: number | null;
+    avg_width?: number | null;
+    avg_height?: number | null;
+    format_counts?: Record<string, number>;
+    size_buckets?: Record<string, number>;
+    resolutions?: string[];
 };
 
 export type TrainingProgress = {
@@ -32,6 +51,38 @@ export type QualityMetrics = {
     samples?: number | null;
 };
 
+export type CompressionStats = {
+    images_count: number;
+    compressed_count: number;
+    original_size?: number | null;
+    compressed_size?: number | null;
+    compression_ratio?: number | null;
+    saved_percent?: number | null;
+    avg_psnr?: number | null;
+    avg_ssim?: number | null;
+    avg_mse?: number | null;
+};
+
+export type TrainingReport = {
+    status?: string;
+    started_at?: string | null;
+    finished_at?: string | null;
+    duration_seconds?: number | null;
+    parameters?: Record<string, unknown> | null;
+    datasets?: Array<Dataset & { profile?: DatasetProfile | null }>;
+    ml_service?: Record<string, unknown> | null;
+    loss_history?: Array<{
+        at?: string | null;
+        percent?: number | null;
+        epoch?: number | null;
+        step?: number | null;
+        losses?: Record<string, number>;
+    }>;
+    latest_progress?: TrainingProgress | null;
+    quality_metrics?: QualityMetrics | null;
+    errors?: string | null;
+};
+
 export type ModelVersion = {
     id: number;
     img_compress_model_id: number;
@@ -42,6 +93,10 @@ export type ModelVersion = {
     errors?: string | null;
     progress?: TrainingProgress | null;
     quality_metrics?: QualityMetrics | null;
+    training_started_at?: string | null;
+    training_finished_at?: string | null;
+    training_report?: TrainingReport | null;
+    compression_stats?: CompressionStats | null;
     author?: Author | null;
     parent_version?: ModelVersion | null;
     datasets: Dataset[];

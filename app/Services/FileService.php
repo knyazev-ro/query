@@ -134,13 +134,18 @@ class FileService
      *
      * @return array{
      *     images_count:int,
+     *     supported_files_count:int,
      *     broken_files:array<int,string>,
      *     empty_directories:array<int,string>,
      *     resolutions:array<int,string>,
+     *     format_counts:array<string,int>,
+     *     size_buckets:array<string,int>,
      *     min_width:int|null,
      *     min_height:int|null,
      *     max_width:int|null,
-     *     max_height:int|null
+     *     max_height:int|null,
+     *     avg_width:float|null,
+     *     avg_height:float|null
      * }
      */
     public function inspectDatasetArchive(string|UploadedFile $path): array
@@ -162,10 +167,23 @@ class FileService
         $imageEntries = [];
         $brokenFiles = [];
         $resolutions = [];
+        $resolutionCounts = [];
+        $formatCounts = [];
+        $sizeBuckets = [
+            '<=128px' => 0,
+            '129-256px' => 0,
+            '257-512px' => 0,
+            '513-1024px' => 0,
+            '>1024px' => 0,
+        ];
         $minWidth = null;
         $minHeight = null;
         $maxWidth = null;
         $maxHeight = null;
+        $widthSum = 0;
+        $heightSum = 0;
+        $readableImagesCount = 0;
+        $totalEntries = $zip->numFiles;
 
         try {
             for ($index = 0; $index < $zip->numFiles; $index++) {
@@ -190,6 +208,8 @@ class FileService
                 }
 
                 $imageEntries[] = $normalized;
+                $extension = strtolower(pathinfo($normalized, PATHINFO_EXTENSION));
+                $formatCounts[$extension] = ($formatCounts[$extension] ?? 0) + 1;
                 $contents = $zip->getFromIndex($index);
                 $imageInfo = is_string($contents) ? @getimagesizefromstring($contents) : false;
 
@@ -200,10 +220,24 @@ class FileService
 
                 [$width, $height] = $imageInfo;
                 $resolutions["{$width}x{$height}"] = true;
+                $resolutionCounts["{$width}x{$height}"] = ($resolutionCounts["{$width}x{$height}"] ?? 0) + 1;
                 $minWidth = $minWidth === null ? $width : min($minWidth, $width);
                 $minHeight = $minHeight === null ? $height : min($minHeight, $height);
                 $maxWidth = $maxWidth === null ? $width : max($maxWidth, $width);
                 $maxHeight = $maxHeight === null ? $height : max($maxHeight, $height);
+                $widthSum += $width;
+                $heightSum += $height;
+                $readableImagesCount++;
+
+                $longestSide = max($width, $height);
+                $bucket = match (true) {
+                    $longestSide <= 128 => '<=128px',
+                    $longestSide <= 256 => '129-256px',
+                    $longestSide <= 512 => '257-512px',
+                    $longestSide <= 1024 => '513-1024px',
+                    default => '>1024px',
+                };
+                $sizeBuckets[$bucket]++;
             }
         } finally {
             $zip->close();
@@ -216,14 +250,23 @@ class FileService
         ));
 
         return [
-            'images_count' => count($imageEntries) - count($brokenFiles),
+            'images_count' => $readableImagesCount,
+            'supported_files_count' => count($imageEntries),
+            'total_entries' => $totalEntries,
             'broken_files' => $brokenFiles,
+            'broken_files_count' => count($brokenFiles),
             'empty_directories' => $emptyDirectories,
+            'empty_directories_count' => count($emptyDirectories),
             'resolutions' => array_keys($resolutions),
+            'resolution_counts' => $resolutionCounts,
+            'format_counts' => $formatCounts,
+            'size_buckets' => $sizeBuckets,
             'min_width' => $minWidth,
             'min_height' => $minHeight,
             'max_width' => $maxWidth,
             'max_height' => $maxHeight,
+            'avg_width' => $readableImagesCount > 0 ? round($widthSum / $readableImagesCount, 2) : null,
+            'avg_height' => $readableImagesCount > 0 ? round($heightSum / $readableImagesCount, 2) : null,
         ];
     }
 

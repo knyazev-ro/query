@@ -14,12 +14,38 @@ type Dataset = {
     images_count: number;
     uses_count: number;
     original_filename?: string | null;
+    profile?: DatasetProfile | null;
+};
+
+type DatasetProfile = {
+    supported_files_count?: number;
+    broken_files_count?: number;
+    empty_directories_count?: number;
+    min_width?: number | null;
+    min_height?: number | null;
+    max_width?: number | null;
+    max_height?: number | null;
+    avg_width?: number | null;
+    avg_height?: number | null;
+    format_counts?: Record<string, number>;
+    size_buckets?: Record<string, number>;
+    resolutions?: string[];
 };
 
 type PaginatedDatasets = {
     data: Dataset[];
     total: number;
 };
+
+function formatResolution(width?: number | null, height?: number | null) {
+    return width && height ? `${Math.round(width)}x${Math.round(height)}` : '-';
+}
+
+function topFormats(profile?: DatasetProfile | null) {
+    return Object.entries(profile?.format_counts ?? {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+}
 
 export default function Main({ datasets }: { datasets: PaginatedDatasets }) {
     const items = datasets?.data ?? [];
@@ -70,7 +96,7 @@ export default function Main({ datasets }: { datasets: PaginatedDatasets }) {
                         {items.map((ds) => (
                             <div
                                 key={ds.id}
-                                className="relative aspect-square w-64 rounded-lg border border-white/10 bg-[#141414] p-4"
+                                className="relative flex min-h-96 w-72 flex-col rounded-lg border border-white/10 bg-[#141414] p-4"
                             >
                                 <div className="mb-3 flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-2">
@@ -133,7 +159,72 @@ export default function Main({ datasets }: { datasets: PaginatedDatasets }) {
                                     </span>
                                 </div>
 
-                                <div className="absolute right-3 bottom-3 text-[11px] text-gray-500">
+                                {ds.profile && (
+                                    <div className="mt-4 space-y-3 rounded border border-white/10 bg-[#101010] p-3">
+                                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                            <ProfileValue
+                                                label="min"
+                                                value={formatResolution(
+                                                    ds.profile.min_width,
+                                                    ds.profile.min_height,
+                                                )}
+                                            />
+                                            <ProfileValue
+                                                label="max"
+                                                value={formatResolution(
+                                                    ds.profile.max_width,
+                                                    ds.profile.max_height,
+                                                )}
+                                            />
+                                            <ProfileValue
+                                                label="avg"
+                                                value={formatResolution(
+                                                    ds.profile.avg_width,
+                                                    ds.profile.avg_height,
+                                                )}
+                                            />
+                                            <ProfileValue
+                                                label="files"
+                                                value={`${ds.profile.supported_files_count ?? ds.images_count}`}
+                                            />
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-1">
+                                            {topFormats(ds.profile).map(
+                                                ([format, count]) => (
+                                                    <span
+                                                        key={format}
+                                                        className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-gray-400"
+                                                    >
+                                                        {format} {count}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+
+                                        <SizeBuckets
+                                            buckets={ds.profile.size_buckets}
+                                        />
+
+                                        {((ds.profile.broken_files_count ??
+                                            0) > 0 ||
+                                            (ds.profile
+                                                .empty_directories_count ??
+                                                0) > 0) && (
+                                            <div className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-300">
+                                                broken{' '}
+                                                {ds.profile
+                                                    .broken_files_count ?? 0}
+                                                , empty folders{' '}
+                                                {ds.profile
+                                                    .empty_directories_count ??
+                                                    0}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="mt-auto pt-4 text-right text-[11px] text-gray-500">
                                     {ds.uses_count} uses
                                 </div>
                             </div>
@@ -142,5 +233,42 @@ export default function Main({ datasets }: { datasets: PaginatedDatasets }) {
                 )}
             </div>
         </Layout>
+    );
+}
+
+function ProfileValue({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded bg-white/5 p-2">
+            <div className="text-gray-600">{label}</div>
+            <div className="mt-0.5 truncate text-gray-300">{value}</div>
+        </div>
+    );
+}
+
+function SizeBuckets({ buckets }: { buckets?: Record<string, number> }) {
+    const entries = Object.entries(buckets ?? {}).filter(([, count]) => count > 0);
+    const total = entries.reduce((sum, [, count]) => sum + count, 0);
+
+    if (entries.length === 0 || total === 0) {
+        return null;
+    }
+
+    return (
+        <div className="space-y-1.5">
+            {entries.map(([label, count]) => (
+                <div key={label}>
+                    <div className="mb-1 flex justify-between text-[10px] text-gray-500">
+                        <span>{label}</span>
+                        <span>{count}</span>
+                    </div>
+                    <div className="h-1 overflow-hidden rounded bg-white/10">
+                        <div
+                            className="h-full rounded bg-[#ff1b1c]"
+                            style={{ width: `${(count / total) * 100}%` }}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
     );
 }

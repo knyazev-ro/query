@@ -63,6 +63,7 @@ class DatasetController extends Controller
             'file_size' => $file->getSize(),
             'mime_type' => $file->getMimeType(),
             'images_count' => $archiveInfo['images_count'],
+            'profile' => $archiveInfo,
         ]);
 
         return Redirect::back()->with('message', 'Dataset uploaded successfully.');
@@ -89,6 +90,7 @@ class DatasetController extends Controller
             $validated['file_size'] = $file->getSize();
             $validated['mime_type'] = $file->getMimeType();
             $validated['images_count'] = $archiveInfo['images_count'];
+            $validated['profile'] = $archiveInfo;
         }
         unset($validated['dataset']);
 

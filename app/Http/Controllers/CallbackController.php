@@ -67,7 +67,7 @@ class CallbackController extends Controller
     public function trainProcess(Request $request)
     {
         $validated = $request->validate([
-            'id' => 'required|integer|exists:model_versions,id',
+            'id' => 'required|integer',
             'errors' => 'nullable|string',
             'status' => ['required', 'string', Rule::in([
                 'queue',
@@ -80,18 +80,105 @@ class CallbackController extends Controller
             'quality_metrics' => 'nullable|array',
         ]);
 
-        $modelVersion = ModelVersion::findOrFail($validated['id']);
+        $modelVersion = ModelVersion::find($validated['id']);
 
-        $modelVersion->update([
+        if ($modelVersion === null) {
+            return response()->json([
+                'message' => 'Training callback ignored because model version no longer exists.',
+            ]);
+        }
+
+        $updates = [
             'status' => $validated['status'],
             'errors' => $validated['errors'] ?? null,
             'progress' => $validated['progress'] ?? $modelVersion->progress,
             'quality_metrics' => $validated['quality_metrics'] ?? $modelVersion->quality_metrics,
-        ]);
+            'training_report' => $this->trainingReportFromCallback($modelVersion, $validated),
+        ];
+
+        if ($validated['status'] === 'run' && $modelVersion->training_started_at === null) {
+            $updates['training_started_at'] = now();
+        }
+
+        if (in_array($validated['status'], ['ready', 'cancel', 'error'], true)) {
+            $updates['training_finished_at'] = now();
+        }
+
+        $modelVersion->update($updates);
 
         return response()->json([
             'message' => 'Training status updated successfully.',
             'data' => $modelVersion->fresh(),
         ]);
+    }
+
+    private function trainingReportFromCallback(ModelVersion $modelVersion, array $validated): array
+    {
+        $modelVersion->loadMissing(['datasets', 'model']);
+
+        $report = $modelVersion->training_report ?? [];
+        $progress = $validated['progress'] ?? null;
+        $status = $validated['status'];
+        $now = now();
+
+        $report['status'] = $status;
+        $report['started_at'] ??= $modelVersion->training_started_at?->toISOString();
+        $report['parameters'] ??= [
+            'image_resolution' => $modelVersion->image_resolution,
+            'train_epochs' => $progress['total_epochs'] ?? null,
+            'train_batch_size' => config('services.img_compress_ml.train_batch_size'),
+        ];
+        $report['model'] ??= [
+            'id' => $modelVersion->img_compress_model_id,
+            'name' => $modelVersion->model?->name,
+            'version_number' => $modelVersion->version_number,
+            'parent_version_id' => $modelVersion->parent_version_id,
+        ];
+        $report['datasets'] ??= $modelVersion->datasets
+            ->map(fn ($dataset) => [
+                'id' => $dataset->id,
+                'name' => $dataset->name,
+                'images_count' => $dataset->images_count,
+                'image_resolution' => $dataset->image_resolution,
+                'train_split' => $dataset->train_split,
+                'test_split' => $dataset->test_split,
+                'profile' => $dataset->profile,
+            ])
+            ->values()
+            ->all();
+
+        if (is_array($progress)) {
+            $report['latest_progress'] = $progress;
+
+            if (! empty($progress['losses']) && is_array($progress['losses'])) {
+                $history = $report['loss_history'] ?? [];
+                $history[] = [
+                    'at' => $progress['updated_at'] ?? $now->toISOString(),
+                    'percent' => $progress['percent'] ?? null,
+                    'epoch' => $progress['current_epoch'] ?? null,
+                    'step' => $progress['current_step'] ?? null,
+                    'losses' => $progress['losses'],
+                ];
+                $report['loss_history'] = array_slice($history, -500);
+            }
+
+            if (! empty($progress['quality_metrics']) && is_array($progress['quality_metrics'])) {
+                $report['quality_metrics'] = $progress['quality_metrics'];
+            }
+        }
+
+        if (! empty($validated['quality_metrics']) && is_array($validated['quality_metrics'])) {
+            $report['quality_metrics'] = $validated['quality_metrics'];
+        }
+
+        if (in_array($status, ['ready', 'cancel', 'error'], true)) {
+            $report['finished_at'] = $now->toISOString();
+            $startedAt = $modelVersion->training_started_at;
+            $report['duration_seconds'] = $startedAt === null ? null : max($startedAt->diffInSeconds($now), 0);
+        }
+
+        $report['errors'] = $validated['errors'] ?? null;
+
+        return $report;
     }
 }
