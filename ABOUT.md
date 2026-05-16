@@ -97,6 +97,62 @@
 - NumPy.
 - Pydantic.
 
+## Loss Обучения Автоэнкодера
+
+Текущая архитектура автоэнкодера оставлена старой conv/transposed-conv версии. Основное изменение качества сейчас находится не в архитектуре, а в reconstruction loss.
+
+Во время обучения autoencoder loss считается так:
+
+```text
+autoencoder_loss = reconstruction_loss + IMG_COMPRESS_ADVERSARIAL_BETA * adversarial_loss
+```
+
+`adversarial_loss` - прежняя GAN/discriminator часть. Она заставляет реконструкцию выглядеть более правдоподобной для discriminator, но discriminator используется только во время обучения.
+
+`reconstruction_loss` теперь не чистый MSE. Он реализован в `ollsqueeze/app/core/losses.py` как смесь:
+
+```text
+reconstruction_loss =
+    L1_WEIGHT     * pixel_l1
+  + MSE_WEIGHT    * pixel_mse
+  + MSSSIM_WEIGHT * ms_ssim_loss
+  + EDGE_WEIGHT   * edge_loss
+```
+
+Зачем нужны компоненты:
+
+- `pixel_l1` сравнивает пиксели по абсолютной ошибке. Обычно дает менее мыльную реконструкцию, чем один MSE.
+- `pixel_mse` штрафует крупные пиксельные ошибки и помогает PSNR/MSE-метрикам.
+- `ms_ssim_loss` сравнивает структурную похожесть на нескольких масштабах: яркость, контраст и локальные паттерны. Это ближе к perceptual image compression, чем чистый pixel loss.
+- `edge_loss` сравнивает Sobel-границы оригинала и реконструкции по X/Y, чтобы не терять контуры и визуальную резкость.
+
+Перед расчетом этих компонентов tensors переводятся из нормализации `[-1, 1]` в `[0, 1]`, потому что SSIM/MSE/edge loss естественнее считать в обычном диапазоне изображения.
+
+Текущие default-веса:
+
+- `IMG_COMPRESS_RECONSTRUCTION_L1_WEIGHT=0.7`
+- `IMG_COMPRESS_RECONSTRUCTION_MSE_WEIGHT=0.3`
+- `IMG_COMPRESS_RECONSTRUCTION_MSSSIM_WEIGHT=0.2`
+- `IMG_COMPRESS_RECONSTRUCTION_EDGE_WEIGHT=0.05`
+- `IMG_COMPRESS_RECONSTRUCTION_MSSSIM_LEVELS=5`
+
+В progress callback `losses` теперь полезно отслеживать не только общий `autoencoder` и `reconstruction`, но и компоненты:
+
+- `pixel_l1`
+- `pixel_mse`
+- `ms_ssim`
+- `edge`
+- `adversarial`
+- `discriminator`
+
+Ожидаемая идея эксперимента: модель должна не только уменьшать пиксельную ошибку, но и лучше сохранять структуру и границы, которые визуально воспринимаются как резкость. Если картинка станет слишком резкой/шумной, первым делом уменьшать `EDGE_WEIGHT` или `ADVERSARIAL_BETA`. Если станет мыльной, пробовать повышать `EDGE_WEIGHT` или `MSSSIM_WEIGHT`.
+
+Почему выбран такой loss:
+
+- В learned image compression классически оптимизируют distortion через MSE/MS-SSIM и rate-distortion подход.
+- В perceptual/generative compression добавляют GAN/perceptual компоненты для визуального качества.
+- LPIPS/VGG perceptual loss пока не добавлен осознанно: он потребует pretrained feature network и усложнит Docker/weights story. Текущий loss не требует внешних весов и работает только на PyTorch tensors.
+
 ## Версионирование Моделей
 
 `ModelVersion` устроен как дерево:
@@ -139,6 +195,11 @@
 - `IMG_COMPRESS_TRAIN_LEARNING_RATE=1e-3`
 - `IMG_COMPRESS_DISCRIMINATOR_LEARNING_RATE=1e-5`
 - `IMG_COMPRESS_ADVERSARIAL_BETA=0.05`
+- `IMG_COMPRESS_RECONSTRUCTION_L1_WEIGHT=0.7`
+- `IMG_COMPRESS_RECONSTRUCTION_MSE_WEIGHT=0.3`
+- `IMG_COMPRESS_RECONSTRUCTION_MSSSIM_WEIGHT=0.2`
+- `IMG_COMPRESS_RECONSTRUCTION_EDGE_WEIGHT=0.05`
+- `IMG_COMPRESS_RECONSTRUCTION_MSSSIM_LEVELS=5`
 
 ## Датасеты
 
@@ -517,6 +578,10 @@ Request body:
     "losses": {
       "autoencoder": 0.01,
       "reconstruction": 0.01,
+      "pixel_l1": 0.01,
+      "pixel_mse": 0.001,
+      "ms_ssim": 0.05,
+      "edge": 0.03,
       "adversarial": 0.2,
       "discriminator": 0.5
     },
