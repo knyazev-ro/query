@@ -26,7 +26,7 @@ export default function CommentaryBlock({
     onSaved?: () => void;
 }) {
     const [hotKey, setHotKey] = useState<string | null>(null);
-    const { data, setData, post, processing, reset } = useForm(emptyComment());
+    const { data, setData, processing, reset } = useForm(emptyComment());
 
     const triggerHotKey = (key: string) => {
         setHotKey(key);
@@ -34,18 +34,31 @@ export default function CommentaryBlock({
     };
 
     const handleClickFileAttach = (files) => {
-        setData('files', uniqBy([...data.files, ...Array.from(files ?? [])], (file) => file?.name));
+        setData(
+            'files',
+            uniqBy(
+                [...data.files, ...Array.from(files ?? [])],
+                (file) => file?.name,
+            ),
+        );
     };
 
-    const handleSubmit = () => {
-        post(sendRoute, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                reset();
-                onSaved?.();
+    const handleSubmit = (content = null) => {
+        router.post(
+            sendRoute,
+            {
+                ...data,
+                content: content ?? data.content,
             },
-        });
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    reset();
+                    onSaved?.();
+                },
+            },
+        );
     };
 
     return (
@@ -64,7 +77,10 @@ export default function CommentaryBlock({
                         setIsEnterOn={handleSubmit}
                     />
                 </div>
-                <Files files={data.files} setFiles={(files) => setData('files', files)} />
+                <Files
+                    files={data.files}
+                    setFiles={(files) => setData('files', files)}
+                />
             </div>
             <div className="flex h-full flex-col justify-end">
                 <div className="z-10 flex items-center gap-3 px-2 py-3">
@@ -73,7 +89,9 @@ export default function CommentaryBlock({
                             multiple
                             type="file"
                             className="absolute z-10 h-7 w-7 cursor-pointer rounded-full opacity-0"
-                            onChange={(event) => handleClickFileAttach(event.target.files)}
+                            onChange={(event) =>
+                                handleClickFileAttach(event.target.files)
+                            }
                         />
                         <PaperClipIcon className="w-5" />
                     </button>

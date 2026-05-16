@@ -98,24 +98,24 @@ export default function RichTextEditor({
             }
 
             const editor = new Quill(containerRef.current, {
-            theme: 'snow',
-            readOnly,
-            placeholder,
-            modules: {
-                toolbar: false,
-                keyboard: {
-                    bindings: {
-                        submit: {
-                            key: 'Enter',
-                            shiftKey: true,
-                            handler: () => {
-                                setIsEnterOn?.(true);
-                                return false;
+                theme: 'snow',
+                readOnly,
+                placeholder,
+                modules: {
+                    toolbar: false,
+                    keyboard: {
+                        bindings: {
+                            submit: {
+                                key: 'Enter',
+                                shiftKey: true,
+                                handler: () => {
+                                    setIsEnterOn?.(editor.getContents());
+                                    return false;
+                                },
                             },
                         },
                     },
                 },
-            },
             });
 
             editor.setContents(normalizedValue);
@@ -180,7 +180,9 @@ export default function RichTextEditor({
                 return;
             }
 
-            const selectedText = editor.getText(selection.index, selection.length).trim();
+            const selectedText = editor
+                .getText(selection.index, selection.length)
+                .trim();
             const safeUrl = getSafeUrl(selectedText);
             if (safeUrl) {
                 editor.deleteText(selection.index, selection.length);

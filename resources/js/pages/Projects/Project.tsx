@@ -6,6 +6,7 @@ import Levels from '@/components/custom/Levels';
 import PickManagerCell from '@/components/custom/PickManagerCell';
 import PickPipelineCell from '@/components/custom/PickPipelineCell';
 import {
+    ArrowLeftIcon,
     CurrencyYenIcon,
     HashtagIcon,
     MapIcon,
@@ -23,9 +24,11 @@ export default function Project({ project, stages }) {
             id: project.id,
             name: project?.name ?? '',
             amount: project?.amount ?? null,
+            level: project?.level ?? 0,
             pipeline: project?.stage?.pipeline ?? null,
             stage: project?.stage ?? null,
             author: project?.author ?? null,
+            author_id: project?.author_id ?? project?.author?.id ?? null,
             stage_id: project?.stage_id ?? null,
             description: project?.description ?? '',
             pipeline_id: project?.stage?.pipeline_id ?? null,
@@ -76,7 +79,30 @@ export default function Project({ project, stages }) {
     };
 
     const handleEditDeal = (data) => {
-        router.post(route('projects.update', project.id), data);
+        router.post(route('projects.update', project.id), data, {
+            preserveScroll: true,
+        });
+    };
+
+    const handleLevelChange = (level) => {
+        const nextData = {
+            ...data,
+            level,
+        };
+
+        setData('level', level);
+        handleEditDeal(nextData);
+    };
+
+    const handleClientChange = (client) => {
+        setData('client', client);
+    };
+
+    const handleClientSave = (client) => {
+        handleEditDeal({
+            ...data,
+            client,
+        });
     };
 
     return (
@@ -88,7 +114,11 @@ export default function Project({ project, stages }) {
                             <HashtagIcon className="w-4" />
                             {project.id}
                         </div>
-                        <Levels level={project.level} size={4} />
+                        <Levels
+                            level={data.level}
+                            size={4}
+                            onChange={handleLevelChange}
+                        />
 
                         {editName ? (
                             <div className="-m-2 flex w-full items-center gap-2">
@@ -125,12 +155,14 @@ export default function Project({ project, stages }) {
                         )}
                     </div>
                     <div className="flex items-center justify-center">
-                        {/* <button
-                            onClick={() => handleEditDeal(data)}
-                            className="rounded-xs bg-[#7700ff] p-2 text-sm font-semibold text-white"
+                        <button
+                            type="button"
+                            onClick={() => router.get(route('projects.index'))}
+                            className="inline-flex h-10 items-center gap-2 rounded border border-white/10 px-3 text-sm font-semibold text-gray-300 transition hover:bg-white/5"
                         >
-                            Сохранить
-                        </button> */}
+                            <ArrowLeftIcon className="h-4 w-4" />
+                            Back
+                        </button>
                     </div>
                 </div>
 
@@ -252,7 +284,11 @@ export default function Project({ project, stages }) {
 
                         {/* CLIENT BLOCK */}
                         <div className="pt-2">
-                            <ClientCompanyCard client={data.client} />
+                            <ClientCompanyCard
+                                client={data.client}
+                                onChange={handleClientChange}
+                                onSave={handleClientSave}
+                            />
                         </div>
                     </div>
 

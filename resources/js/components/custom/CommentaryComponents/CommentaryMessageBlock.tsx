@@ -1,5 +1,9 @@
 // @ts-nocheck
-import { EllipsisVerticalIcon, PencilIcon, StarIcon } from '@heroicons/react/16/solid';
+import {
+    EllipsisVerticalIcon,
+    PencilIcon,
+    StarIcon,
+} from '@heroicons/react/16/solid';
 import { useForm } from '@inertiajs/react';
 import { HeartIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -22,7 +26,10 @@ const authorName = (commentary) => {
         return 'Unknown author';
     }
 
-    return [master.name, master.last_name].filter(Boolean).join(' ') || master.email;
+    return (
+        [master.name, master.last_name].filter(Boolean).join(' ') ||
+        master.email
+    );
 };
 
 export default function CommentaryMessageBlock({ commentary, onEdit }) {
@@ -34,8 +41,14 @@ export default function CommentaryMessageBlock({ commentary, onEdit }) {
         files: commentary?.file_locations ?? [],
     });
 
-    const handleSave = () => {
-        onEdit(data, () => setIsEditing(false));
+    const handleSave = (content = null) => {
+        onEdit(
+            {
+                ...data,
+                content: content ?? data.content,
+            },
+            () => setIsEditing(false),
+        );
     };
 
     const triggerHotKey = (key: string) => {
@@ -51,9 +64,13 @@ export default function CommentaryMessageBlock({ commentary, onEdit }) {
                 </div>
             </div>
             <div className="flex w-full min-w-0 flex-col text-sm">
-                <div className="font-medium text-white">{authorName(commentary)}</div>
+                <div className="font-medium text-white">
+                    {authorName(commentary)}
+                </div>
                 <div className="text-sm text-gray-400">
-                    {new Date(commentary?.updated_at ?? commentary?.created_at).toLocaleString()}
+                    {new Date(
+                        commentary?.updated_at ?? commentary?.created_at,
+                    ).toLocaleString()}
                 </div>
                 <div className="mt-4 flex flex-col gap-2">
                     <div className="rounded-md bg-white/5 p-3 text-gray-100">
@@ -135,7 +152,10 @@ export default function CommentaryMessageBlock({ commentary, onEdit }) {
                 </div>
             </div>
             <div className="flex h-full flex-col py-1">
-                <button type="button" className="cursor-pointer text-gray-400 hover:text-white">
+                <button
+                    type="button"
+                    className="cursor-pointer text-gray-400 hover:text-white"
+                >
                     <EllipsisVerticalIcon className="w-5" />
                 </button>
             </div>
