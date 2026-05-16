@@ -53,8 +53,18 @@ function formatMetric(value?: number | null, digits = 4) {
     return typeof value === 'number' ? value.toFixed(digits) : '-';
 }
 
+function pageRange(currentPage: number, lastPage: number) {
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(lastPage, currentPage + 2);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
 export default function Main({ images }: { images: PaginatedImgMedia }) {
     const items = images?.data ?? [];
+    const currentPage = images?.current_page ?? 1;
+    const lastPage = images?.last_page ?? 1;
+    const pages = pageRange(currentPage, lastPage);
     const hasActiveCompression = items.some((image) =>
         ['just created', 'compressing'].includes(image.status),
     );
@@ -102,6 +112,21 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
             route('compressions.retry', image.id),
             {},
             { preserveScroll: true },
+        );
+    };
+
+    const goToPage = (page: number) => {
+        if (page < 1 || page > lastPage || page === currentPage) {
+            return;
+        }
+
+        router.get(
+            route('compressions.index'),
+            { page },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
         );
     };
 
@@ -261,10 +286,10 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
 
                                         {image.errors && (
                                             <div className="mb-4 rounded border border-[#ff1b1c]/25 bg-[#ff1b1c]/10 p-2">
-                                                <div className="mb-1 text-[10px] font-semibold uppercase text-[#ff8b8c]">
+                                                <div className="mb-1 text-[10px] font-semibold text-[#ff8b8c] uppercase">
                                                     ML error
                                                 </div>
-                                                <div className="line-clamp-3 break-words text-xs text-[#ff6b6c]">
+                                                <div className="line-clamp-3 text-xs break-words text-[#ff6b6c]">
                                                     {shortError(image.errors)}
                                                 </div>
                                             </div>
@@ -353,6 +378,84 @@ export default function Main({ images }: { images: PaginatedImgMedia }) {
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {lastPage > 1 && (
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+                        <div className="text-xs text-gray-500">
+                            Showing {images.from ?? 0}-{images.to ?? 0} of{' '}
+                            {images.total}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => goToPage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="h-8 rounded border border-white/10 px-3 text-xs text-gray-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Previous
+                            </button>
+
+                            {pages[0] > 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => goToPage(1)}
+                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-xs text-gray-400 transition hover:bg-white/5 hover:text-white"
+                                    >
+                                        1
+                                    </button>
+                                    {pages[0] > 2 && (
+                                        <span className="px-1 text-xs text-gray-600">
+                                            ...
+                                        </span>
+                                    )}
+                                </>
+                            )}
+
+                            {pages.map((page) => (
+                                <button
+                                    key={page}
+                                    type="button"
+                                    onClick={() => goToPage(page)}
+                                    className={`grid h-8 w-8 place-items-center rounded border text-xs transition ${
+                                        page === currentPage
+                                            ? 'border-[#ff1b1c] bg-[#ff1b1c] text-white'
+                                            : 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            {pages[pages.length - 1] < lastPage && (
+                                <>
+                                    {pages[pages.length - 1] < lastPage - 1 && (
+                                        <span className="px-1 text-xs text-gray-600">
+                                            ...
+                                        </span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => goToPage(lastPage)}
+                                        className="grid h-8 w-8 place-items-center rounded border border-white/10 text-xs text-gray-400 transition hover:bg-white/5 hover:text-white"
+                                    >
+                                        {lastPage}
+                                    </button>
+                                </>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={() => goToPage(currentPage + 1)}
+                                disabled={currentPage === lastPage}
+                                className="h-8 rounded border border-white/10 px-3 text-xs text-gray-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

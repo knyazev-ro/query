@@ -27,7 +27,7 @@ class CompressionController extends Controller
             ->latest()
             ->paginate(20);
 
-        if ($request->has('page')) {
+        if ($request->expectsJson()) {
             return $images;
         }
 
