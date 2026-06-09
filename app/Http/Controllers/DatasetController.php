@@ -152,13 +152,13 @@ class DatasetController extends Controller
             $messages[] = "Empty folders detected: {$sample}.";
         }
 
-        if (
-            $info['min_width'] !== null
-            && $info['min_height'] !== null
-            && ($info['min_width'] < $imageResolution || $info['min_height'] < $imageResolution)
-        ) {
-            $messages[] = "Some images are smaller than {$imageResolution}x{$imageResolution}; minimum found is {$info['min_width']}x{$info['min_height']}.";
-        }
+        // if (
+        //     $info['min_width'] !== null
+        //     && $info['min_height'] !== null
+        //     && ($info['min_width'] < $imageResolution || $info['min_height'] < $imageResolution)
+        // ) {
+        //     $messages[] = "Some images are smaller than {$imageResolution}x{$imageResolution}; minimum found is {$info['min_width']}x{$info['min_height']}.";
+        // }
 
         if ($messages !== []) {
             throw ValidationException::withMessages([

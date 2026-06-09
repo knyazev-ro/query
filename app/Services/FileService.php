@@ -194,12 +194,22 @@ class FileService
                 }
 
                 $normalized = trim(str_replace('\\', '/', $entry), '/');
-                if ($normalized === '' || $normalized === '__MACOSX' || str_starts_with($normalized, '__MACOSX/')) {
+                if ($normalized === '') {
                     continue;
                 }
 
+                $isMetadataEntry = $normalized === '__MACOSX' || str_starts_with($normalized, '__MACOSX/');
+
                 if (str_ends_with($entry, '/')) {
-                    $directories[] = $normalized.'/';
+                    if (! $isMetadataEntry) {
+                        $directories[] = $normalized.'/';
+                    }
+                    continue;
+                }
+
+                $contents = $this->readZipEntry($zip, $index, $normalized);
+
+                if ($isMetadataEntry) {
                     continue;
                 }
 
@@ -210,8 +220,7 @@ class FileService
                 $imageEntries[] = $normalized;
                 $extension = strtolower(pathinfo($normalized, PATHINFO_EXTENSION));
                 $formatCounts[$extension] = ($formatCounts[$extension] ?? 0) + 1;
-                $contents = $zip->getFromIndex($index);
-                $imageInfo = is_string($contents) ? @getimagesizefromstring($contents) : false;
+                $imageInfo = @getimagesizefromstring($contents);
 
                 if ($imageInfo === false) {
                     $brokenFiles[] = $normalized;
@@ -295,5 +304,25 @@ class FileService
     private function isSupportedImageEntry(string $entry): bool
     {
         return preg_match('~\.(jpe?g|png|bmp|webp|tiff?)$~i', $entry) === 1;
+    }
+
+    private function readZipEntry(ZipArchive $zip, int $index, string $entry): string
+    {
+        $contents = $zip->getFromIndex($index);
+        if (! is_string($contents)) {
+            throw new RuntimeException("Dataset archive contains corrupted or unreadable file: {$entry}.");
+        }
+
+        $stat = $zip->statIndex($index);
+        if (is_array($stat) && array_key_exists('crc', $stat)) {
+            $actualCrc = hexdec(hash('crc32b', $contents));
+            $expectedCrc = (int) $stat['crc'];
+
+            if ($actualCrc !== $expectedCrc) {
+                throw new RuntimeException("Dataset archive contains corrupted file: {$entry}.");
+            }
+        }
+
+        return $contents;
     }
 }
