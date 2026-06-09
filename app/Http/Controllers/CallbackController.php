@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
+use App\Services\BenchmarkService;
 use App\Services\ImageAnalysisService;
 use App\Services\MLAuditLogger;
 use Illuminate\Http\Request;
@@ -20,17 +21,15 @@ class CallbackController extends Controller
      * our python ml microservice could fire callback with change status/write info about errors or successfully send compressed image app_path()
      * we should save it because laravel is the center the TRUTH and only laravel has access to DB
      *
-     * @param Request $request
-     * 
+     *
      * @return [type]
-     * 
      */
     public function compressionProcess(
         Request $request,
         ImageAnalysisService $imageAnalysis,
         MLAuditLogger $auditLogger,
-    )
-    {
+        BenchmarkService $benchmarkService,
+    ) {
         $validated = $request->validate([
             'id' => 'required|integer|exists:img_media,id',
             'errors' => 'nullable|string',
@@ -89,6 +88,8 @@ class CallbackController extends Controller
                 ]);
             }
         }
+
+        $benchmarkService->refreshForImage($imgMedia->fresh());
 
         return response()->json([
             'message' => 'Compression status updated successfully.',

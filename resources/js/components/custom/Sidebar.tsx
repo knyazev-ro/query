@@ -5,6 +5,7 @@ import {
 } from '@heroicons/react/16/solid';
 import { useState } from 'react';
 
+import Benchmark from './SidebarComponents/Benchmark';
 import ImgModel from './SidebarComponents/ImgModel';
 import Contacts from './SidebarComponents/Contacts';
 import Model from './SidebarComponents/Model';
@@ -29,6 +30,7 @@ export default function Sidebar() {
         { component: Model },
         { component: Dataset },
         { component: Compression },
+        { component: Benchmark },
         { component: MLDiagnostics },
         { component: ImgModel },
     ];

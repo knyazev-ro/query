@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Jobs\CompressJob;
 use App\Models\ImgBenchmark;
+use App\Models\ImgBenchmarkRun;
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
+use App\Services\BenchmarkService;
 use App\Services\MLAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -15,25 +17,23 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use RuntimeException;
 
 class BenchmarkController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, BenchmarkService $benchmarkService)
     {
         $benchmarks = ImgBenchmark::query()
-            ->with(['modelVersion.model'])
-            ->withCount('images')
+            ->with(['runs.modelVersion.model'])
             ->where('author_id', Auth::id())
             ->latest()
             ->paginate(12);
 
-        $benchmarks->getCollection()->each(function (ImgBenchmark $benchmark): void {
-            $benchmark->load('images');
-            $this->refreshSummary($benchmark);
-            $benchmark->unsetRelation('images');
-        });
+        $benchmarks->getCollection()->transform(
+            fn (ImgBenchmark $benchmark) => $benchmarkService->refresh($benchmark, true, false),
+        );
 
-        if ($request->has('page')) {
+        if ($request->expectsJson() || $request->has('page')) {
             return $benchmarks;
         }
 
@@ -55,72 +55,219 @@ class BenchmarkController extends Controller
     {
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
-            'model_version_id' => [
+            'model_version_ids' => 'required|array|min:2|max:10',
+            'model_version_ids.*' => [
                 'required',
                 'integer',
+                'distinct',
                 Rule::exists('model_versions', 'id')->where('status', 'ready'),
             ],
             'images' => 'required|array|min:1|max:30',
             'images.*' => 'required|image|max:10240',
         ]);
 
-        $modelVersion = ModelVersion::findOrFail($validated['model_version_id']);
-        $files = $request->file('images');
+        $modelVersions = ModelVersion::query()
+            ->with('model')
+            ->whereIn('id', $validated['model_version_ids'])
+            ->get()
+            ->keyBy('id');
+        $benchmarkId = null;
 
-        $benchmark = DB::transaction(function () use ($validated, $modelVersion, $files, $auditLogger) {
-            $benchmark = ImgBenchmark::create([
-                'author_id' => Auth::id(),
-                'model_version_id' => $modelVersion->id,
-                'name' => $validated['name'] ?: 'Benchmark '.now()->format('Y-m-d H:i'),
-                'status' => 'queue',
-                'summary' => null,
-                'errors' => null,
-            ]);
+        try {
+            $benchmark = DB::transaction(function () use (
+                $validated,
+                $modelVersions,
+                $request,
+                $auditLogger,
+                &$benchmarkId,
+            ) {
+                $firstModelVersionId = (int) $validated['model_version_ids'][0];
+                $benchmark = ImgBenchmark::create([
+                    'author_id' => Auth::id(),
+                    'model_version_id' => $firstModelVersionId,
+                    'name' => $validated['name'] ?: 'Benchmark '.now()->format('Y-m-d H:i'),
+                    'status' => 'queue',
+                    'summary' => null,
+                    'errors' => null,
+                ]);
+                $benchmarkId = $benchmark->id;
+                $sources = collect($request->file('images'))
+                    ->map(fn (UploadedFile $file) => $this->storeSourceImage($benchmark, $file));
 
-            $images = collect($files)
-                ->map(fn (UploadedFile $file) => $this->storeBenchmarkImage($file, $modelVersion, $benchmark))
-                ->values();
+                $runs = collect($validated['model_version_ids'])
+                    ->values()
+                    ->map(function (int $modelVersionId, int $index) use (
+                        $benchmark,
+                        $modelVersions,
+                        $sources,
+                    ): ImgBenchmarkRun {
+                        $modelVersion = $modelVersions->get($modelVersionId);
+                        if ($modelVersion === null) {
+                            throw new RuntimeException("Model version {$modelVersionId} is not available.");
+                        }
 
-            CompressJob::dispatch(
-                $modelVersion->id,
-                $images->pluck('id')->all(),
-            )->afterCommit();
+                        $run = ImgBenchmarkRun::create([
+                            'img_benchmark_id' => $benchmark->id,
+                            'model_version_id' => $modelVersion->id,
+                            'position' => $index + 1,
+                            'status' => $index === 0 ? 'queue' : 'pending',
+                            'started_at' => $index === 0 ? now() : null,
+                        ]);
 
-            $auditLogger->info('benchmark_created', [
-                'entity' => $benchmark,
-                'model_version' => $modelVersion,
-                'message' => "Benchmark {$benchmark->name} queued.",
-                'context' => [
-                    'image_ids' => $images->pluck('id')->all(),
-                    'images_count' => $images->count(),
-                ],
-            ]);
+                        $sources->each(
+                            fn (array $source) => $this->createRunImage($source, $modelVersion, $run),
+                        );
 
-            return $benchmark;
-        });
+                        return $run->load('images');
+                    });
 
-        return Redirect::route('benchmarks.show', $benchmark->id)
+                $firstRun = $runs->first();
+                CompressJob::dispatch(
+                    (int) $firstRun->model_version_id,
+                    $firstRun->images->pluck('id')->all(),
+                )->afterCommit();
+
+                $auditLogger->info('benchmark_created', [
+                    'entity' => $benchmark,
+                    'model_version_id' => $firstModelVersionId,
+                    'message' => "Benchmark {$benchmark->name} queued.",
+                    'context' => [
+                        'model_version_ids' => $validated['model_version_ids'],
+                        'models_count' => $runs->count(),
+                        'images_count' => $sources->count(),
+                    ],
+                ]);
+
+                return $benchmark;
+            });
+        } catch (\Throwable $exception) {
+            if ($benchmarkId !== null) {
+                Storage::deleteDirectory("benchmarks/{$benchmarkId}");
+            }
+
+            throw $exception;
+        }
+
+        return Redirect::route('benchmarks.show', $benchmark)
             ->with('message', 'Benchmark queued successfully.');
     }
 
-    public function show(ImgBenchmark $benchmark)
+    public function show(ImgBenchmark $benchmark, BenchmarkService $benchmarkService)
     {
         $this->authorizeBenchmark($benchmark);
-        $benchmark->load(['modelVersion.model', 'images' => fn ($query) => $query->latest()]);
-        $this->refreshSummary($benchmark);
+        $benchmark = $benchmarkService->refresh($benchmark);
+
+        $benchmark->runs->each(function (ImgBenchmarkRun $run) use ($benchmarkService): void {
+            $run->images->each(function (ImgMedia $image) use ($benchmarkService): void {
+                $image->setAttribute('benchmark_methods', $benchmarkService->imageMethods($image));
+            });
+        });
 
         return Inertia::render('Benchmarks/Show', compact('benchmark'));
+    }
+
+    public function export(ImgBenchmark $benchmark, BenchmarkService $benchmarkService)
+    {
+        $this->authorizeBenchmark($benchmark);
+        $benchmark = $benchmarkService->refresh($benchmark, false);
+        $filename = $this->safeBaseName($benchmark->name).'-results.csv';
+
+        return response()->streamDownload(function () use ($benchmark, $benchmarkService): void {
+            $stream = fopen('php://output', 'wb');
+            fwrite($stream, "\xEF\xBB\xBF");
+            fputcsv($stream, [
+                'row_type',
+                'benchmark',
+                'model',
+                'version',
+                'resolution',
+                'image',
+                'status',
+                'method',
+                'original_size_bytes',
+                'result_size_bytes',
+                'saved_percent',
+                'psnr',
+                'ssim',
+                'mse',
+                'quality',
+                'error',
+            ]);
+
+            foreach ($benchmark->runs as $run) {
+                $modelName = $run->modelVersion?->model?->name ?? 'Deleted model';
+                $version = $run->modelVersion?->version_number;
+                $resolution = $run->modelVersion?->image_resolution;
+
+                foreach (['ml', 'jpeg', 'webp'] as $method) {
+                    $summary = $run->summary['methods'][$method] ?? [];
+                    fputcsv($stream, [
+                        'summary',
+                        $benchmark->name,
+                        $modelName,
+                        $version,
+                        $resolution,
+                        '',
+                        $run->status,
+                        $method,
+                        '',
+                        $summary['avg_size'] ?? null,
+                        $summary['avg_saved_percent'] ?? null,
+                        $summary['avg_psnr'] ?? null,
+                        $summary['avg_ssim'] ?? null,
+                        $summary['avg_mse'] ?? null,
+                        '',
+                        $run->errors,
+                    ]);
+                }
+
+                foreach ($run->images as $image) {
+                    foreach ($benchmarkService->imageMethods($image) as $method => $metrics) {
+                        if ($metrics === null && $method !== 'ml') {
+                            continue;
+                        }
+
+                        fputcsv($stream, [
+                            'image',
+                            $benchmark->name,
+                            $modelName,
+                            $version,
+                            $resolution,
+                            $image->original_name,
+                            $image->status,
+                            $method,
+                            $image->original_size,
+                            $metrics['size'] ?? null,
+                            $metrics['saved_percent'] ?? null,
+                            $metrics['psnr'] ?? null,
+                            $metrics['ssim'] ?? null,
+                            $metrics['mse'] ?? null,
+                            $metrics['quality'] ?? null,
+                            $image->errors,
+                        ]);
+                    }
+                }
+            }
+
+            fclose($stream);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     public function destroy(ImgBenchmark $benchmark, MLAuditLogger $auditLogger)
     {
         $this->authorizeBenchmark($benchmark);
-        $benchmark->load(['images', 'modelVersion']);
+        $benchmark->load(['runs.images', 'images', 'modelVersion']);
+        $images = $benchmark->runs
+            ->flatMap(fn (ImgBenchmarkRun $run) => $run->images)
+            ->concat($benchmark->images)
+            ->unique('id');
 
-        foreach ($benchmark->images as $image) {
+        foreach ($images as $image) {
             $this->deleteImageFiles($image);
             $image->delete();
         }
+
+        Storage::deleteDirectory("benchmarks/{$benchmark->id}");
 
         $auditLogger->info('benchmark_deleted', [
             'entity' => $benchmark,
@@ -133,175 +280,47 @@ class BenchmarkController extends Controller
         return Redirect::route('benchmarks.index')->with('message', 'Benchmark deleted successfully.');
     }
 
-    private function storeBenchmarkImage(UploadedFile $file, ModelVersion $modelVersion, ImgBenchmark $benchmark): ImgMedia
+    private function storeSourceImage(ImgBenchmark $benchmark, UploadedFile $file): array
     {
-        $image = ImgMedia::create([
+        $path = Storage::putFile("benchmarks/{$benchmark->id}/sources", $file);
+        if (! is_string($path)) {
+            throw new RuntimeException("Could not store {$file->getClientOriginalName()}.");
+        }
+
+        return [
+            'path' => $path,
             'original_name' => $file->getClientOriginalName(),
             'mime_type' => $file->getMimeType() ?? 'application/octet-stream',
             'original_size' => $file->getSize() ?? 0,
+        ];
+    }
+
+    private function createRunImage(
+        array $source,
+        ModelVersion $modelVersion,
+        ImgBenchmarkRun $run,
+    ): ImgMedia {
+        $image = ImgMedia::create([
+            'original_name' => $source['original_name'],
+            'mime_type' => $source['mime_type'],
+            'original_size' => $source['original_size'],
             'author_id' => Auth::id(),
             'model_version_id' => $modelVersion->id,
-            'entity_id' => $benchmark->id,
-            'entity_type' => ImgBenchmark::class,
+            'entity_id' => $run->id,
+            'entity_type' => ImgBenchmarkRun::class,
             'status' => 'just created',
             'errors' => '',
         ]);
+        $extension = pathinfo($source['path'], PATHINFO_EXTENSION);
+        $destination = "img-media/{$image->id}/original".($extension !== '' ? ".{$extension}" : '');
 
-        $image->update([
-            'img_path' => Storage::putFile("img-media/{$image->id}", $file),
-        ]);
+        if (! Storage::copy($source['path'], $destination)) {
+            throw new RuntimeException("Could not prepare {$source['original_name']} for benchmark.");
+        }
+
+        $image->update(['img_path' => $destination]);
 
         return $image->fresh();
-    }
-
-    private function refreshSummary(ImgBenchmark $benchmark): void
-    {
-        $benchmark->loadMissing('images');
-        $images = $benchmark->images;
-
-        if ($images->isEmpty()) {
-            return;
-        }
-
-        $activeCount = $images->whereIn('status', ['just created', 'compressing'])->count();
-        $completed = $images->where('status', 'compressed');
-        $errorCount = $images->where('status', 'error')->count();
-        $cancelCount = $images->where('status', 'cancel')->count();
-        $status = match (true) {
-            $activeCount > 0 => $completed->isEmpty() ? 'queue' : 'run',
-            $completed->count() === $images->count() => 'ready',
-            $errorCount > 0 => 'error',
-            $cancelCount === $images->count() => 'cancel',
-            default => 'ready',
-        };
-
-        $summary = [
-            'images_count' => $images->count(),
-            'completed_count' => $completed->count(),
-            'active_count' => $activeCount,
-            'error_count' => $errorCount,
-            'cancel_count' => $cancelCount,
-            'methods' => [
-                'ml' => $this->methodSummary($completed, 'ml'),
-                'jpeg' => $this->methodSummary($completed, 'jpeg'),
-                'webp' => $this->methodSummary($completed, 'webp'),
-            ],
-            'best_cases' => $this->rankedCases($completed, descending: true),
-            'worst_cases' => $this->rankedCases($completed, descending: false),
-            'updated_at' => now()->toISOString(),
-        ];
-
-        if ($benchmark->status !== $status || $benchmark->summary !== $summary) {
-            $benchmark->update([
-                'status' => $status,
-                'summary' => $summary,
-                'errors' => $errorCount > 0
-                    ? $images->where('status', 'error')->pluck('errors')->filter()->take(3)->implode(' ')
-                    : null,
-            ]);
-        }
-    }
-
-    private function methodSummary($images, string $method): array
-    {
-        $rows = $images
-            ->map(fn (ImgMedia $image) => $this->methodMetrics($image, $method))
-            ->filter()
-            ->values();
-
-        return [
-            'count' => $rows->count(),
-            'avg_size' => $this->avg($rows->pluck('size')->all()),
-            'avg_saved_percent' => $this->avg($rows->pluck('saved_percent')->all()),
-            'avg_psnr' => $this->avg($rows->pluck('psnr')->all()),
-            'avg_ssim' => $this->avg($rows->pluck('ssim')->all()),
-            'avg_mse' => $this->avg($rows->pluck('mse')->all()),
-        ];
-    }
-
-    private function methodMetrics(ImgMedia $image, string $method): ?array
-    {
-        $metrics = $image->quality_metrics ?? [];
-
-        if ($method === 'ml') {
-            $size = $image->compressed_size;
-            if ($size === null) {
-                return null;
-            }
-
-            return [
-                'size' => $size,
-                'saved_percent' => $this->savedPercent($size, $image->original_size),
-                'psnr' => $metrics['psnr'] ?? null,
-                'ssim' => $metrics['ssim'] ?? null,
-                'mse' => $metrics['mse'] ?? null,
-            ];
-        }
-
-        $baseline = $metrics['baselines'][$method] ?? null;
-        if (! is_array($baseline)) {
-            return null;
-        }
-
-        return [
-            'size' => $baseline['size'] ?? null,
-            'saved_percent' => $this->savedPercent($baseline['size'] ?? null, $image->original_size),
-            'psnr' => $baseline['psnr'] ?? null,
-            'ssim' => $baseline['ssim'] ?? null,
-            'mse' => $baseline['mse'] ?? null,
-            'quality' => $baseline['quality'] ?? null,
-        ];
-    }
-
-    private function rankedCases($images, bool $descending): array
-    {
-        return $images
-            ->map(function (ImgMedia $image) {
-                $metrics = $image->quality_metrics ?? [];
-                $psnr = $metrics['psnr'] ?? null;
-
-                if (! is_numeric($psnr)) {
-                    return null;
-                }
-
-                return [
-                    'id' => $image->id,
-                    'original_name' => $image->original_name,
-                    'original_size' => $image->original_size,
-                    'compressed_size' => $image->compressed_size,
-                    'saved_percent' => $this->savedPercent($image->compressed_size, $image->original_size),
-                    'psnr' => $psnr,
-                    'ssim' => $metrics['ssim'] ?? null,
-                    'mse' => $metrics['mse'] ?? null,
-                ];
-            })
-            ->filter()
-            ->sortBy('psnr', SORT_REGULAR, $descending)
-            ->take(3)
-            ->values()
-            ->all();
-    }
-
-    private function avg(array $values): ?float
-    {
-        $numbers = collect($values)
-            ->filter(fn ($value) => is_numeric($value))
-            ->values();
-
-        if ($numbers->isEmpty()) {
-            return null;
-        }
-
-        return round((float) $numbers->avg(), 6);
-    }
-
-    private function savedPercent(?int $size, ?int $originalSize): ?float
-    {
-        if (! $size || ! $originalSize) {
-            return null;
-        }
-
-        return round(max(100 - ($size / $originalSize * 100), 0), 4);
     }
 
     private function deleteImageFiles(ImgMedia $imgMedia): void
@@ -320,5 +339,10 @@ class BenchmarkController extends Controller
     private function authorizeBenchmark(ImgBenchmark $benchmark): void
     {
         abort_if($benchmark->author_id !== Auth::id(), 404);
+    }
+
+    private function safeBaseName(string $filename): string
+    {
+        return preg_replace('/[^A-Za-z0-9._-]+/', '_', $filename) ?: 'benchmark';
     }
 }

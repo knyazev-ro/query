@@ -71,6 +71,7 @@ Route::middleware(['auth', 'verified'])->get('/ml-audit', [MLAuditController::cl
 Route::middleware(['auth', 'verified'])->prefix('benchmarks')->name('benchmarks.')->group(function () {
     Route::get('/', [BenchmarkController::class, 'index'])->name('index');
     Route::get('/create', [BenchmarkController::class, 'create'])->name('create');
+    Route::get('/export/{benchmark}', [BenchmarkController::class, 'export'])->name('export');
     Route::get('/show/{benchmark}', [BenchmarkController::class, 'show'])->name('show');
     Route::post('/store', [BenchmarkController::class, 'store'])->name('store');
     Route::post('/delete/{benchmark}', [BenchmarkController::class, 'destroy'])->name('delete');

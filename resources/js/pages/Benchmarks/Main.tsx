@@ -1,16 +1,17 @@
 import Layout from '@/components/custom/Layout';
-import {
-    BeakerIcon,
-    EyeIcon,
-    PlusIcon,
-    TrashIcon,
-} from '@heroicons/react/16/solid';
 import { router } from '@inertiajs/react';
+import { Beaker, Eye, Plus, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { route } from 'ziggy-js';
-import type { ImgBenchmark, PaginatedBenchmarks } from './types';
+import type {
+    BenchmarkRun,
+    BenchmarkSummaryRun,
+    ImgBenchmark,
+    PaginatedBenchmarks,
+} from './types';
 
 const statusClass: Record<string, string> = {
+    pending: 'bg-white/5 text-gray-400',
     queue: 'bg-white/5 text-gray-400',
     run: 'bg-amber-500/10 text-amber-300',
     ready: 'bg-emerald-500/10 text-emerald-300',
@@ -22,18 +23,16 @@ function formatMetric(value?: number | null, digits = 2) {
     return typeof value === 'number' ? value.toFixed(digits) : '-';
 }
 
-function formatBytes(bytes?: number | null) {
-    if (!bytes) {
-        return '-';
-    }
+function modelName(run: BenchmarkRun | BenchmarkSummaryRun) {
+    return 'model_name' in run
+        ? run.model_name
+        : (run as BenchmarkRun).model_version?.model?.name;
+}
 
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const index = Math.min(
-        Math.floor(Math.log(bytes) / Math.log(1024)),
-        units.length - 1,
-    );
-
-    return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+function versionNumber(run: BenchmarkRun | BenchmarkSummaryRun) {
+    return 'version_number' in run
+        ? run.version_number
+        : (run as BenchmarkRun).model_version?.version_number;
 }
 
 export default function Main({
@@ -76,7 +75,7 @@ export default function Main({
                 <div className="mb-5 flex items-center justify-between gap-4">
                     <div>
                         <h1 className="text-sm font-semibold text-gray-300">
-                            Batch benchmarks
+                            Benchmarks
                         </h1>
                         <div className="mt-1 text-xs text-gray-500">
                             {benchmarks?.total ?? 0} total
@@ -88,7 +87,7 @@ export default function Main({
                         onClick={() => router.get(route('benchmarks.create'))}
                         className="inline-flex h-10 items-center gap-2 rounded bg-[#ff1b1c] px-3 text-sm font-semibold text-white transition hover:bg-[#d91617]"
                     >
-                        <PlusIcon className="h-4 w-4" />
+                        <Plus className="h-4 w-4" />
                         New benchmark
                     </button>
                 </div>
@@ -98,30 +97,35 @@ export default function Main({
                         No benchmarks yet
                     </div>
                 ) : (
-                    <div className="flex flex-wrap gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                         {items.map((benchmark) => {
-                            const ml = benchmark.summary?.methods?.ml;
+                            const runs =
+                                benchmark.summary?.runs ?? benchmark.runs ?? [];
+                            const current =
+                                runs.find((run) =>
+                                    ['queue', 'run'].includes(run.status),
+                                ) ?? runs.at(-1);
+                            const ml = current?.summary?.methods?.ml;
+                            const modelNames = runs
+                                .map((run) => {
+                                    return `${modelName(run) ?? 'model'} v${versionNumber(run) ?? '-'}`;
+                                })
+                                .join(', ');
 
                             return (
                                 <div
                                     key={benchmark.id}
-                                    className="flex min-h-72 w-80 flex-col rounded-lg border border-white/10 bg-[#141414] p-4"
+                                    className="flex min-h-64 flex-col rounded-lg border border-white/10 bg-[#141414] p-4"
                                 >
                                     <div className="mb-3 flex items-start justify-between gap-3">
                                         <div className="flex min-w-0 items-center gap-2">
-                                            <BeakerIcon className="h-5 w-5 shrink-0 text-gray-400" />
+                                            <Beaker className="h-5 w-5 shrink-0 text-gray-400" />
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-medium">
                                                     {benchmark.name}
                                                 </div>
-                                                <div className="mt-0.5 truncate text-[11px] text-gray-600">
-                                                    {benchmark.model_version
-                                                        ?.model?.name ??
-                                                        'model'}{' '}
-                                                    v
-                                                    {benchmark.model_version
-                                                        ?.version_number ??
-                                                        '-'}
+                                                <div className="mt-0.5 line-clamp-2 text-[11px] text-gray-600">
+                                                    {modelNames}
                                                 </div>
                                             </div>
                                         </div>
@@ -134,8 +138,12 @@ export default function Main({
 
                                     <div className="mb-4 grid grid-cols-3 gap-2 text-[11px]">
                                         <Metric
-                                            label="done"
-                                            value={`${benchmark.summary?.completed_count ?? 0}/${benchmark.summary?.images_count ?? benchmark.images_count ?? 0}`}
+                                            label="models"
+                                            value={`${benchmark.summary?.completed_models_count ?? 0}/${benchmark.summary?.models_count ?? runs.length}`}
+                                        />
+                                        <Metric
+                                            label="images"
+                                            value={`${current?.summary?.completed_count ?? 0}/${benchmark.summary?.images_count ?? current?.summary?.images_count ?? 0}`}
                                         />
                                         <Metric
                                             label="saved"
@@ -145,31 +153,15 @@ export default function Main({
                                                     : '-'
                                             }
                                         />
-                                        <Metric
-                                            label="size"
-                                            value={formatBytes(ml?.avg_size)}
-                                        />
                                     </div>
 
-                                    <div className="mb-4 grid grid-cols-3 gap-1 text-[10px]">
-                                        <Metric
-                                            label="PSNR"
-                                            value={formatMetric(
-                                                ml?.avg_psnr,
-                                                2,
-                                            )}
-                                        />
-                                        <Metric
-                                            label="SSIM"
-                                            value={formatMetric(
-                                                ml?.avg_ssim,
-                                                4,
-                                            )}
-                                        />
-                                        <Metric
-                                            label="MSE"
-                                            value={formatMetric(ml?.avg_mse, 6)}
-                                        />
+                                    <div className="mb-4 text-xs text-gray-500">
+                                        Current:{' '}
+                                        <span className="text-gray-300">
+                                            {current
+                                                ? `${modelName(current) ?? 'model'} v${versionNumber(current) ?? '-'}`
+                                                : '-'}
+                                        </span>
                                     </div>
 
                                     {benchmark.errors && (
@@ -194,7 +186,7 @@ export default function Main({
                                             className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-400 transition hover:bg-white/5 hover:text-white"
                                             title="Open"
                                         >
-                                            <EyeIcon className="h-4 w-4" />
+                                            <Eye className="h-4 w-4" />
                                         </button>
                                         <button
                                             type="button"
@@ -204,7 +196,7 @@ export default function Main({
                                             className="grid h-8 w-8 place-items-center rounded border border-white/10 text-gray-500 transition hover:border-[#ff1b1c]/50 hover:bg-[#ff1b1c]/10 hover:text-[#ff1b1c]"
                                             title="Delete"
                                         >
-                                            <TrashIcon className="h-4 w-4" />
+                                            <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>

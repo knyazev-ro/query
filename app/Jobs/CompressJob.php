@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\ImgMedia;
 use App\Models\ModelVersion;
+use App\Services\BenchmarkService;
 use App\Services\MLAuditLogger;
 use App\Services\MLConnector;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,7 +17,7 @@ class CompressJob implements ShouldQueue
     public int $tries = 1;
 
     /**
-     * @param array<int> $imgMediaIds
+     * @param  array<int>  $imgMediaIds
      */
     public function __construct(
         public int $modelVersionId,
@@ -25,19 +26,36 @@ class CompressJob implements ShouldQueue
         $this->imgMediaIds = array_values(array_unique($this->imgMediaIds));
     }
 
-    public function handle(MLConnector $mlConnector, MLAuditLogger $auditLogger): void
-    {
+    public function handle(
+        MLConnector $mlConnector,
+        MLAuditLogger $auditLogger,
+        BenchmarkService $benchmarkService,
+    ): void {
         $modelVersion = ModelVersion::find($this->modelVersionId);
 
         if ($modelVersion === null || $modelVersion->status !== 'ready') {
+            $images = ImgMedia::query()
+                ->whereIn('id', $this->imgMediaIds)
+                ->whereIn('status', ['just created', 'compressing'])
+                ->get();
+            $message = 'Compression job skipped because model version is missing or not ready.';
+
+            $images->each->update([
+                'status' => 'error',
+                'errors' => $message,
+            ]);
+            $images->each(
+                fn (ImgMedia $image) => $benchmarkService->refreshForImage($image->fresh()),
+            );
             $auditLogger->warning('compression_job_skipped', [
                 'model_version_id' => $this->modelVersionId,
-                'message' => 'Compression job skipped because model version is missing or not ready.',
+                'message' => $message,
                 'context' => [
                     'image_ids' => $this->imgMediaIds,
                     'status' => $modelVersion?->status,
                 ],
             ]);
+
             return;
         }
 
@@ -55,6 +73,7 @@ class CompressJob implements ShouldQueue
                     'image_ids' => $this->imgMediaIds,
                 ],
             ]);
+
             return;
         }
 
@@ -66,6 +85,12 @@ class CompressJob implements ShouldQueue
             ],
         ]);
 
-        $mlConnector->compress($modelVersion, $imgMedia);
+        try {
+            $mlConnector->compress($modelVersion, $imgMedia);
+        } finally {
+            $imgMedia->each(
+                fn (ImgMedia $image) => $benchmarkService->refreshForImage($image->fresh()),
+            );
+        }
     }
 }

@@ -4,43 +4,42 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-class ImgBenchmark extends Model
+class ImgBenchmarkRun extends Model
 {
     protected $fillable = [
-        'author_id',
+        'img_benchmark_id',
         'model_version_id',
-        'name',
+        'position',
         'status',
         'summary',
         'errors',
+        'started_at',
+        'finished_at',
     ];
 
     protected $casts = [
-        'author_id' => 'integer',
+        'img_benchmark_id' => 'integer',
         'model_version_id' => 'integer',
+        'position' => 'integer',
         'summary' => 'array',
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
     ];
 
-    public function author(): BelongsTo
+    public function benchmark(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return $this->belongsTo(ImgBenchmark::class, 'img_benchmark_id');
     }
 
     public function modelVersion(): BelongsTo
     {
-        return $this->belongsTo(ModelVersion::class, 'model_version_id');
+        return $this->belongsTo(ModelVersion::class);
     }
 
     public function images(): MorphMany
     {
         return $this->morphMany(ImgMedia::class, 'entity');
-    }
-
-    public function runs(): HasMany
-    {
-        return $this->hasMany(ImgBenchmarkRun::class)->orderBy('position');
     }
 }

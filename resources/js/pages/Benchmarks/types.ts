@@ -1,6 +1,25 @@
-import type { ImgMedia } from '../Compressions/types';
+import type {
+    ImgMedia,
+    ModelVersion,
+    QualityMetrics,
+} from '../Compressions/types';
 
-export type BenchmarkStatus = 'queue' | 'run' | 'ready' | 'error' | 'cancel';
+export type BenchmarkStatus =
+    | 'pending'
+    | 'queue'
+    | 'run'
+    | 'ready'
+    | 'error'
+    | 'cancel';
+
+export type BenchmarkMethodMetrics = {
+    size?: number | null;
+    saved_percent?: number | null;
+    psnr?: number | null;
+    ssim?: number | null;
+    mse?: number | null;
+    quality?: number | null;
+};
 
 export type BenchmarkMethodSummary = {
     count: number;
@@ -22,7 +41,7 @@ export type BenchmarkCase = {
     mse?: number | null;
 };
 
-export type BenchmarkSummary = {
+export type BenchmarkRunSummary = {
     images_count: number;
     completed_count: number;
     active_count: number;
@@ -34,15 +53,45 @@ export type BenchmarkSummary = {
     updated_at?: string;
 };
 
-export type BenchmarkModelVersion = {
+export type BenchmarkImage = ImgMedia & {
+    benchmark_methods?: Record<
+        'ml' | 'jpeg' | 'webp',
+        BenchmarkMethodMetrics | null
+    >;
+    quality_metrics?: QualityMetrics | null;
+};
+
+export type BenchmarkRun = {
     id: number;
-    version_number: number;
-    image_resolution: number;
-    status: string;
-    model?: {
-        id: number;
-        name: string;
-    } | null;
+    position: number;
+    status: BenchmarkStatus;
+    summary?: BenchmarkRunSummary | null;
+    errors?: string | null;
+    started_at?: string | null;
+    finished_at?: string | null;
+    model_version?: ModelVersion | null;
+    images: BenchmarkImage[];
+};
+
+export type BenchmarkSummaryRun = {
+    id: number;
+    position: number;
+    status: BenchmarkStatus;
+    model_version_id?: number | null;
+    model_name?: string | null;
+    version_number?: number | null;
+    image_resolution?: number | null;
+    summary?: BenchmarkRunSummary | null;
+    errors?: string | null;
+};
+
+export type BenchmarkSummary = {
+    models_count: number;
+    completed_models_count: number;
+    images_count: number;
+    comparisons_count: number;
+    runs: BenchmarkSummaryRun[];
+    updated_at?: string;
 };
 
 export type ImgBenchmark = {
@@ -51,9 +100,7 @@ export type ImgBenchmark = {
     status: BenchmarkStatus;
     summary?: BenchmarkSummary | null;
     errors?: string | null;
-    model_version?: BenchmarkModelVersion | null;
-    images?: ImgMedia[];
-    images_count?: number;
+    runs: BenchmarkRun[];
     created_at?: string;
     updated_at?: string;
 };
